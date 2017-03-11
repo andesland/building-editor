@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import * as THREE from 'three'
+var OrbitControls = require('three-orbit-controls')(THREE)
 
 class App extends Component {
 
@@ -22,7 +23,11 @@ class App extends Component {
     renderer.shadowMapEnabled = true
     // renderer.shadowMapSoft = false;
 
-    const camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR );
+
+    const camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR )
+
+    const controls = new OrbitControls(camera)
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color( 0xF6F6F6 );
 
@@ -105,27 +110,49 @@ class App extends Component {
     scene.add(above)
 
 
-    // Create a new mesh with
-    // sphere geometry - we will cover
-    // the sphereMaterial next!
     const sphere = new THREE.Mesh(
-
       new THREE.CubeGeometry( 100, 100, 100 ),
-
-      // new THREE.SphereGeometry(
-      //   RADIUS,
-      //   SEGMENTS,
-      //   RINGS),
-
       sphereMaterial);
-
-    // Move the Sphere back in Z so we
-    // can see it.
     sphere.receiveShadow = true;
     sphere.castShadow = true;
-
-    // Finally, add the sphere to the scene.
     scene.add(sphere);
+
+    var starPoints = [];
+    starPoints.push( new THREE.Vector2 (   0,  50 ) );
+    starPoints.push( new THREE.Vector2 (  10,  10 ) );
+    starPoints.push( new THREE.Vector2 (  40,  10 ) );
+    starPoints.push( new THREE.Vector2 (  20, -10 ) );
+    starPoints.push( new THREE.Vector2 (  30, -50 ) );
+    starPoints.push( new THREE.Vector2 (   0, -20 ) );
+    starPoints.push( new THREE.Vector2 ( -30, -50 ) );
+    starPoints.push( new THREE.Vector2 ( -20, -10 ) );
+    starPoints.push( new THREE.Vector2 ( -40,  10 ) );
+    starPoints.push( new THREE.Vector2 ( -10,  10 ) );
+    var starShape = new THREE.Shape( starPoints );
+    var extrusionSettings = {
+      size: 300, curveSegments: 3,
+      height: 400,
+      bevelEnabled: false,
+      // material: 0, extrudeMaterial: 1
+    };
+
+    var starGeometry = new THREE.ExtrudeGeometry( starShape, extrusionSettings );
+    var star = new THREE.Mesh( starGeometry, new THREE.MeshBasicMaterial({color: 0x00ff00}) );
+    scene.add(star);
+
+
+    // var triangleGeometry = new THREE.Geometry();
+    // triangleGeometry.vertices.push(new THREE.Vector3( 0.0,  1.0, 0.0));
+    // triangleGeometry.vertices.push(new THREE.Vector3(-1.0, -1.0, 0.0));
+    // triangleGeometry.vertices.push(new THREE.Vector3( 1.0, -1.0, 0.0));
+    // triangleGeometry.faces.push(new THREE.Face3(0, 1, 2));
+    // var extrudeSettings = { amount: 100, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 };
+    // var extruded = new THREE.ExtrudeGeometry( triangleGeometry, extrudeSettings );
+    // var triangleMaterial = new THREE.MeshBasicMaterial({ color:0xFF0000, side:THREE.DoubleSide });
+    // var triangleMesh = new THREE.Mesh(extruded, triangleMaterial);
+    // // triangleMesh.position.set(-1.5, 0.0, 4.0);
+    // scene.add(triangleMesh);
+
 
     function update () {
       // Draw!
