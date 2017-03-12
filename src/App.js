@@ -19,7 +19,8 @@ class App extends Component {
     const container = document.querySelector('#container');
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio( window.devicePixelRatio )
-    renderer.shadowMap.type = THREE.BasicShadowMap;
+    renderer.shadowMapType = THREE.PCFSoftShadowMap;
+    // renderer.shadowMap.type = THREE.BasicShadowMap;
     renderer.shadowMap.enabled = true
     renderer.setSize(WIDTH, HEIGHT);
     // renderer.shadowMapSoft = false;
@@ -60,28 +61,28 @@ class App extends Component {
     scene.add(ambientLight);
 
 
+    // // create a point light
+    const insideLight = new THREE.HemisphereLight(0xFFFFFF, 0xF2F2DE, 0.1);
+    scene.add(insideLight);
+
     // create a point light
-    const pointLight = new THREE.PointLight(0xF2F2DE, 0.3, 0, 1);
+    const pointLight = new THREE.PointLight(0xF2F2DE, 0.4, 0, 1);
     // const pointLightHelper = new THREE.PointLightHelper(pointLight, 50);
     // scene.add(pointLightHelper);
     pointLight.castShadow = true;
     // pointLight.shadowCameraVisible = true;
     pointLight.shadow.mapSize.width = 1024;
     pointLight.shadow.mapSize.height = 1024;
-    // pointLight.shadow.bias = 0.0001;
-    // pointLight.shadow.camera.fov = 120;
-    // pointLight.shadow.camera.fov = VIEW_ANGLE;
-
-    // set its position
     pointLight.position.x = 90;
     pointLight.position.y = 500;
     pointLight.position.z = -300;
-
-    // add to the scene
     scene.add(pointLight);
 
+
+
+
     // create the sphere's material
-    const plywoodMaterial = new THREE.MeshLambertMaterial({color: 0xF4F4E2});
+    const plywoodMaterial = new THREE.MeshLambertMaterial({color: 0xD5D3BC});
 
 
     var outerFramePoints = [];
@@ -114,6 +115,12 @@ class App extends Component {
       frame.receiveShadow = true;
       frame.castShadow = true;
       scene.add(frame);
+
+      var helper =new THREE.EdgesHelper( frame, 0x000000 );
+      helper.position.z = frame.position.z;
+      helper.matrixAutoUpdate = true;
+      helper.material.linewidth = 2;
+      scene.add(helper);
     }
 
     var components = [
@@ -123,15 +130,15 @@ class App extends Component {
 
       ['floor', [[90, 12], [90, 10], [-90, 10], [-90, 12]]],
 
-      ['leftInnerWall', [[89, 100], [89, 10], [89.5, 10], [89.5, 100]]], // 0.435
-      ['rightInnerWall', [[-88, 100], [-88, 10], [-90, 10], [-90, 100]], 0.435], //
+      ['leftInnerWall', [[89, 100], [89, 12], [89.5, 12], [89.5, 100]]], // 0.435
+      ['rightInnerWall', [[-88, 100], [-88, 12], [-90, 12], [-90, 100]], 0.435], //
 
       ['leftCeiling', [[0, 170], [-90, 100], [-100, 100], [0, 180]]], // 0.435
 
       ['rightCeiling1', [[0, 168], [88, 100], [90, 100], [0, 170]], 0.315], // 0.435
       ['rightCeiling2', [[0, 168], [88, 100], [90, 100], [0, 170]], 0.435, 0.535], // 0.435
 
-      ['backWall', [[0, 180], [100, 100], [100, 0], [-100, 0], [-100, 100]], 0.02, 116], // 0.435
+      ['backWall', [[0, 180], [100, 100], [100, 12], [-100, 12], [-100, 100]], 0.02, 116], // 0.435
 
       ['frontWall', [[0, 180], [100, 100], [100, 0], [50, 0], [50, 100], [-50, 100], [-50, 0], [-100, 0], [-100, 100]], 0.03], // 0.435
 
@@ -154,6 +161,12 @@ class App extends Component {
       mesh.receiveShadow = true;
       mesh.castShadow = true;
       scene.add(mesh);
+
+      var helper =new THREE.EdgesHelper( mesh, 0x000000 );
+      helper.position.z = mesh.position.z;
+      helper.matrixAutoUpdate = true;
+      helper.material.linewidth = 2;
+      scene.add(helper);
     })
 
     controls.update()
