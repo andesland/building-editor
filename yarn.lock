@@ -1132,6 +1132,20 @@ cli-width@^2.0.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/cli-width/-/cli-width-2.1.0.tgz#b234ca209b29ef66fc518d9b98d5847b00edf00a"
 
+clipper-js@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/clipper-js/-/clipper-js-1.0.1.tgz#5ec571e69a8be929fae33848d8ae08ae6a72887c"
+  dependencies:
+    clipper-lib "^6.2.1"
+
+clipper-lib@^6.2.1:
+  version "6.2.1"
+  resolved "https://registry.yarnpkg.com/clipper-lib/-/clipper-lib-6.2.1.tgz#266d8ec7575c589f05f23e9cd003de50e23117b6"
+
+clipsy@^0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/clipsy/-/clipsy-0.0.3.tgz#6cb69c92436a5dcf1ef12a936f99e172833ee53d"
+
 cliui@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/cliui/-/cliui-2.1.0.tgz#4b475760ff80264c762c3a1719032e91c7fea0d1"

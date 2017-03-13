@@ -2,6 +2,11 @@ import React, { Component } from 'react'
 import * as THREE from 'three'
 import key from 'keymaster'
 var OrbitControls = require('three-orbit-controls')(THREE)
+import Shape from 'clipper-js'
+import {Clipper} from 'clipsy'
+
+const normalize = (mm) => (mm/100.0)
+const mm = normalize
 
 class App extends Component {
 
@@ -29,16 +34,15 @@ class App extends Component {
     const scene = new THREE.Scene();
 
     const camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR )
-    camera.position.y = 320;
-    camera.position.x = -100;
-    camera.position.z = -300;
+    camera.position.y = 220;
+    camera.position.x = -50;
+    camera.position.z = -200;
 
     const controls = new OrbitControls(camera)
     controls.minPolarAngle = 0// Math.PI/6
     controls.maxPolarAngle = Math.PI / 2.1
-    controls.maxDistance = 600
-    controls.minDistance = 250
-    controls.target.set(0, 20, 0)
+    controls.maxDistance = 200
+    controls.minDistance = 10
     controls.enableZoom = true
 
     scene.background = new THREE.Color(0xF6F6F6);
@@ -50,19 +54,19 @@ class App extends Component {
     const groundGeometry = new THREE.PlaneGeometry(800,800);
     let ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.receiveShadow = true;
-    ground.position.y = 0; //lower it
+    ground.position.y = -mm(200-36); //lower it
     ground.rotation.x = -Math.PI/2; //-90 degrees around the xaxis
     // ground.doubleSided = true;
     scene.add(ground);
 
 
-    const gridMaterial = new THREE.MeshLambertMaterial({color: 0xEEEEEE, wireframe: true});
-    const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
-    let grid = new THREE.Mesh(gridGeometry, gridMaterial);
-    grid.receiveShadow = false;
-    grid.position.y = -1; //lower it
-    grid.rotation.x = -Math.PI/2; //-90 degrees around the xaxis
-    scene.add(grid);
+    // const gridMaterial = new THREE.MeshLambertMaterial({color: 0xEEEEEE, wireframe: true});
+    // const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
+    // let grid = new THREE.Mesh(gridGeometry, gridMaterial);
+    // grid.receiveShadow = false;
+    // grid.position.y = ground.position.y-1; //lower it
+    // grid.rotation.x = -Math.PI/2; //-90 degrees around the xaxis
+    // scene.add(grid);
 
 
     const ambientLight = new THREE.AmbientLight(0xF6F6F6)
@@ -81,6 +85,7 @@ class App extends Component {
     pointLight.position.x = 90;
     pointLight.position.y = 500;
     pointLight.position.z = -300;
+    pointLight.shadowCameraVisible = true;
     scene.add(pointLight);
     // // const pointLightHelper = new THREE.PointLightHelper(pointLight, 50);
     // // scene.add(pointLightHelper);
@@ -89,40 +94,84 @@ class App extends Component {
     // create the sphere's material
     const plywoodMaterial = new THREE.MeshPhongMaterial({color: 0xD5D3BC, shininess: 0});
 
+    const spec = {
+      width: 3900,
+      roof: {
+        apex: 3900
+      },
+      leftWall: {
+        height: 2400
+      },
+      rightWall: {
+        height: 2400
+      },
+      beams: {
+        width: 74,
+        height: 200,
 
-    var outerFramePoints = [];
-    outerFramePoints.push( new THREE.Vector2 (0, 180) );
-    outerFramePoints.push( new THREE.Vector2 (100, 100) );
-    outerFramePoints.push( new THREE.Vector2 (100, 0) );
-    outerFramePoints.push( new THREE.Vector2 (-100, 0) );
-    outerFramePoints.push( new THREE.Vector2 (-100, 100) );
-    var frameShape = new THREE.Shape(outerFramePoints);
+      }
+    }
 
-    var innerFramePoints = [];
-    innerFramePoints.push( new THREE.Vector2 (0, 170) );
-    innerFramePoints.push( new THREE.Vector2 (-90, 100) );
-    innerFramePoints.push( new THREE.Vector2 (-90, 10) );
-    innerFramePoints.push( new THREE.Vector2 (90, 10) );
-    innerFramePoints.push( new THREE.Vector2 (90, 100) );
+    const outerPoints = [
+      [0, spec.roof.apex],
+      [spec.width/2, spec.rightWall.height],
+      [spec.width/2, 0],
+
+        [spec.width/2-84, 0, true],
+        [spec.width/2-84, 36, true],
+        [spec.width/2-84-74, 36, true],
+        [spec.width/2-84-74, 0, true],
+
+        [-spec.width/2+84+74, 0, true],
+        [-spec.width/2+84+74, 36, true],
+        [-spec.width/2+84, 36, true],
+        [-spec.width/2+84, 0, true],
+
+      [-spec.width/2, 0],
+      [-spec.width/2, spec.leftWall.height],
+    ]
+    var outerFramePoints = outerPoints.map(p => new THREE.Vector2(mm(p[0]), mm(p[1])))
+    var frameShape = new THREE.Shape(outerFramePoints)
+
+    var paths = [outerPoints.filter(p => !p[2]).map(p => ({X: p[0], Y: p[1]}))]
+
+    const subject = new Shape(paths, true)
+    const innerPoints = subject.offset(-250, {
+      jointType: 'jtMiter',
+      endType: 'etClosedPolygon',
+      miterLimit: 2,
+      roundPrecision: 0
+    }).paths[0].map(p => new THREE.Vector2(mm(p.X), mm(p.Y)))
+    // const ip = new Clipper().OffsetPolygons(paths, -250, 0, 2, true)[0]
+    // const innerPoints = ip.map(p => new THREE.Vector2(mm(p.X), mm(p.Y)))
+    // console.log(paths[0].length, innerPoints.length)
+
+
+    // var innerFramePoints = [];
+    // innerFramePoints.push( new THREE.Vector2 (0, 170) );
+    // innerFramePoints.push( new THREE.Vector2 (-90, 100) );
+    // innerFramePoints.push( new THREE.Vector2 (-90, 10) );
+    // innerFramePoints.push( new THREE.Vector2 (90, 10) );
+    // innerFramePoints.push( new THREE.Vector2 (90, 100) );
     var hole = new THREE.Path();
-    hole.fromPoints(innerFramePoints);
+    hole.fromPoints(innerPoints);
     frameShape.holes = [hole];
 
-    var frameGeometry = new THREE.ExtrudeGeometry( frameShape, { steps: 2, amount: 5, bevelEnabled: false } );
+    var frameGeometry = new THREE.ExtrudeGeometry( frameShape, { steps: 2, amount: mm(150), bevelEnabled: false } );
 
     var frame,
       total = 8,
-      distance = 40;
+      distance = mm(1200);
     for (var i = 0; i < total; i++) {
-      frame = new THREE.Mesh( frameGeometry, plywoodMaterial );
-      frame.position.z = (i * distance) -(total/2 * distance);
+      frame = new THREE.Mesh(frameGeometry, plywoodMaterial);
+      frame.position.z = (i * distance);// -(total/2 * distance);
       frame.position.y = 0;
       frame.receiveShadow = true;
       frame.castShadow = true;
       MicroHouse.add(frame);
 
       if (EDGES_COLOR) {
-        var helper =new THREE.EdgesHelper( frame, EDGES_COLOR );
+        var helper = new THREE.EdgesHelper( frame, EDGES_COLOR );
         helper.position.z = frame.position.z;
         helper.matrixAutoUpdate = true;
         helper.material.linewidth = 2;
@@ -131,59 +180,91 @@ class App extends Component {
     }
 
     var components = [
-      ['topBeam', [[-1.5, 177], [1.5, 177], [1.5, 170], [-1.5, 170]]],
-      ['topLeftBeam', [[-97, 100], [-90, 100], [-90, 98], [-97, 98]]],
-      ['topRightBeam', [[97, 100], [90, 100], [90, 98], [97, 98]]],
 
-      // ['floor', [[90, 12], [90, 10], [-90, 10], [-90, 12]]],
-
-      // ['leftInnerWall', [[89, 100], [89, 12], [89.5, 12], [89.5, 100]]], // 0.435
-      // ['rightInnerWall', [[-88, 100], [-88, 12], [-90, 12], [-90, 100]], 0.435], //
-
-      ['leftCeiling', [[0, 170], [-90, 100], [-100, 101], [0, 181]]], // 0.435
-
-      ['rightCeiling1', [[0, 168], [88, 100], [90, 100], [0, 170]], 0.315], // 0.435
-      ['rightCeiling2', [[0, 168], [88, 100], [90, 100], [0, 170]], 0.435, 0.535], // 0.435
-
-      ['backWall', [[0, 180], [100, 100], [100, 12], [-100, 12], [-100, 100]], 0.02, 116], // 0.435
-      // ['backWall', [[0, 180], [100, 100], [100, 12], [-100, 12], [-100, 100]], 0.02, 275], // 0.435
-
-      ['frontWall', [[0, 180], [100, 100], [100, 0], [50, 0], [50, 100], [-50, 100], [-50, 0], [-100, 0], [-100, 100]], 0.03], // 0.435
-
-      // ['insideDivider', [[0, 180], [100, 100], [100, 0], [50, 0], [50, 100], [-50, 100], [-50, 0], [-100, 0], [-100, 100]], 0.01, -40], //
+      ['roof', {
+          position: [0, mm(spec.roof.apex), mm(75) + mm(1200)],
+          vector: [0, 0, 1],
+          shape: [
+            [0,0],
+            [mm(1200), 0],
+            [mm(1200), mm(spec.rightWall.height)],
+            [0, mm(spec.rightWall.height)]
+          ],
+          depth: mm(18),
+          // width: mm(1200),
+          // height: mm(spec.rightWall.height),
+          // mirror: [mm(spec.width/2), 0, 0]
+        }
+      ],
 
     ]
 
-    for (var i = 0; i < 10; i++) {
-      var startingPoint = (20*i) - 90
-      components.push([`bottomSlats${i}`, [[startingPoint+1.5, 7], [startingPoint+1.5, 0], [startingPoint-1.5, 0], [startingPoint-1.5, 7]]],)
-    }
-
-    components.forEach(beam => {
-      let name = beam[0]
-      let points = beam[1].map(points => new THREE.Vector2(...points) )
-      let shape = new THREE.Shape(points)
-      let geom = new THREE.ExtrudeGeometry(shape, { steps: 2, amount: (total-1) * distance * (beam[2] || 1), bevelEnabled: false })
+    components.forEach(component => {
+      const name = component[0]
+      const { position, shape, depth, vector } = component[1]
+      let vectorPosition = new THREE.Vector3(...position)
+      let vectorVector = new THREE.Vector3(...vector)
+      let points = shape.map(xy => {
+        // return vectorPosition.clone().add(
+        //   new THREE.Vector3(xy[0], xy[1])
+        // )
+        // return vectorPosition.clone().add(
+          return new THREE.Vector2(xy[0], xy[1])
+        // )
+      })
+      let pointsShape = new THREE.Shape(points)
+      let geom = new THREE.ExtrudeGeometry(pointsShape, { steps: 2, amount: depth, bevelEnabled: false })
       let mesh = new THREE.Mesh(geom, plywoodMaterial)
-      mesh.position.z = (beam[3] || -(total/2 * distance));
+
+      let parent = new THREE.Object3D();
+      parent.add(mesh);
+      MicroHouse.add(parent);
+      parent.rotation.y = Math.PI/2
+
+      // geom.translate(0, 10, 0);
+
+      console.log(vectorPosition)
+      parent.position.x = vectorPosition.x
+      parent.position.y = vectorPosition.y
+      parent.position.z = vectorPosition.z
+      // parent.rotation.z = 1
+      // mesh.rotation.y = Math.PI/2;
       mesh.receiveShadow = true;
       mesh.castShadow = true;
-      MicroHouse.add(mesh);
+      // if (EDGES_COLOR) {
+      //   var helper =new THREE.EdgesHelper( mesh, EDGES_COLOR );
+      //   helper.position.z = mesh.position.z;
+      //   helper.material.linewidth = 2;
+      //   // helper.updateMatrix()
+      //   MicroHouse.add(helper);
+      // }
 
-      if (EDGES_COLOR) {
-        var helper =new THREE.EdgesHelper( mesh, EDGES_COLOR );
-        helper.position.z = mesh.position.z;
-        helper.matrixAutoUpdate = true;
-        helper.material.linewidth = 2;
-        MicroHouse.add(helper);
-      }
+
+      var dir = new THREE.Vector3( 1, -0.78, 0 );
+      dir.normalize();
+      mesh.translateX(dir.x)
+      mesh.translateY(dir.y)
+      mesh.translateZ(dir.z)
+      //normalize the direction vector (convert to vector of length 1)
+
+      var origin = parent.position;
+      var length = 100;
+      var hex = 0xFF0000;
+      var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
+      scene.add( arrowHelper );
+
     })
+
+
+
+
+
+
 
     var box = new THREE.Box3().setFromObject(MicroHouse)
     console.log( box.min, box.max, box.size() );
     // MicroHouse.translateZ(box.size().z/2);
-
-
+    // controls.target.set(0, 20, box.size()/2)
     MicroHouse.add(camera);
     scene.add(MicroHouse);
 
