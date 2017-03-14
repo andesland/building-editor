@@ -14,3 +14,11 @@
   z-index: 2;
   text-align: right;
 }
+
+ul, li {
+  list-style: none;
+}
+li.total {
+  font-weight: bold;
+  font-size: 2em;
+}
