@@ -22,9 +22,9 @@ const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0})
 let spec = {
   showEdges: false,
   width: 3900,
-  frames: 10,
+  frames: 7,
   roof: {
-    apex: 3900
+    apex: 3800
   },
   leftWall: {
     height: 2400
@@ -124,7 +124,7 @@ class App extends Component {
     const mainLight = new THREE.HemisphereLight(0xFFFFFF, 0xEBEBD8, 0.7);
     this.scene.add(mainLight);
 
-    const pointLight = new THREE.PointLight(0xCFCCB4, 0.5, 0, 1);
+    const pointLight = new THREE.PointLight(0xCFCCB4, 0.4, 0, 1);
     pointLight.castShadow = true;
     pointLight.shadow.mapSize.width = 2048;
     pointLight.shadow.mapSize.height = 2048;
@@ -166,6 +166,17 @@ class App extends Component {
     gui.add(spec.roof, 'apex', 2800, 4600).step(100).listen().onChange(this.updateWikiHouse)
     gui.add(spec, 'frames', 4, 14).step(1).listen().onChange(this.updateWikiHouse)
     gui.add(spec, 'showEdges').onChange(this.updateWikiHouse)
+
+    let actions = {
+      roof: function() { window['roof'].forEach(w => w.visible = !w.visible )},
+      ceiling: function() { window['innerRoof'].forEach(w => w.visible = !w.visible )},
+      outerWall: function() { window['outerWall'].forEach(w => w.visible = !w.visible )},
+      innerWall: function() { window['innerWall'].forEach(w => w.visible = !w.visible )}
+    }
+    gui.add(actions, 'roof')
+    gui.add(actions, 'ceiling')
+    gui.add(actions, 'outerWall')
+    gui.add(actions, 'innerWall')
 
     // ADD BALLS!
     //
@@ -280,7 +291,7 @@ class App extends Component {
     this.mouseDown = false
     this.selectedBall = null
     this.controls.enabled = true
-    this.renderer.domElement.style.cursor = '-webkit-grab'
+    this.renderer.domElement.style.cursor = this.selectedBall ? '-webkit-grab' : 'default'
   }
 
   render() {
@@ -376,6 +387,7 @@ class App extends Component {
     }
 
     var components = [
+
       ['bar', {
           position: [-mm(spec.width/2 - 84), -mm(200-36), 0],
           shape: [
@@ -384,7 +396,7 @@ class App extends Component {
             [mm(74), mm(200)],
             [0, mm(200)]
           ],
-          depth: mm(4800),
+          depth: mm(spec.length + 150),//mm(4800),
           rotation: {
             x: 0,
             y: 0,
@@ -402,7 +414,7 @@ class App extends Component {
             [mm(74), mm(200)],
             [0, mm(200)]
           ],
-          depth: mm(4800),
+          depth: mm(spec.length + 150),//mm(4800),
           rotation: {
             x: 0,
             y: 0,
@@ -412,80 +424,98 @@ class App extends Component {
         }
       ],
 
-      ['roof', {
-          position: [0, mm(spec.roof.apex), mm(75)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.roof.length)],
-            [0, mm(spec.roof.length)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: spec.roof.angle - Math.PI,
-            y: -Math.PI/2,
-            z: 0
-          }
-        }
-      ],
 
-      ['roof', {
-          position: [0, mm(spec.roof.apex), mm(75+1205)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.roof.length)],
-            [0, mm(spec.roof.length)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: spec.roof.angle - Math.PI,
-            y: -Math.PI/2,
-            z: 0
-          }
-        }
-      ],
+    ]
 
-      ['roof', {
-          position: [0, mm(spec.roof.apex), mm(75 + 1200)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.roof.length)],
-            [0, mm(spec.roof.length)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: spec.roof.angle,
-            y: -Math.PI/2,
-            z: - Math.PI
-          }
-        }
-      ],
+    for (var i = 0; i < spec.frames-1; i++) {
 
-      ['roof', {
-          position: [0, mm(spec.roof.apex), mm(75 + 2405)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.roof.length)],
-            [0, mm(spec.roof.length)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: spec.roof.angle,
-            y: -Math.PI/2,
-            z: - Math.PI
+      components.push(
+        ['roof', {
+            position: [0, mm(spec.roof.apex), mm(75 + (i * 1200) +3 )],
+            shape: [
+              [0,0],
+              [mm(1200-6), 0],
+              [mm(1200-6), mm(Math.min(2400,spec.roof.length))],
+              [0, mm(Math.min(2400,spec.roof.length))]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: spec.roof.angle - Math.PI,
+              y: -Math.PI/2,
+              z: 0
+            }
           }
-        }
-      ],
+        ]
+      )
 
+      components.push(
+        ['roof', {
+            position: [0, mm(spec.roof.apex), mm(75 + 1200 + (i * 1200) +3) ],
+            shape: [
+              [0,0],
+              [mm(1200 -6), 0],
+              [mm(1200 -6), mm(Math.min(2400,spec.roof.length))],
+              [0, mm(Math.min(2400,spec.roof.length))]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: spec.roof.angle,
+              y: -Math.PI/2,
+              z: - Math.PI
+            }
+          }
+        ],
+      )
+
+      if (spec.roof.length > 2400) {
+        components.push(
+          ['roof', {
+              position: [0, mm(spec.roof.apex), mm(75 + (i * 1200) +3 )],
+              shape: [
+                [0, mm(2400 + 3)],
+                [mm(1200-6), mm(2400 + 3)],
+                [mm(1200-6), mm(spec.roof.length)],
+                [0, mm(spec.roof.length)]
+              ],
+              depth: mm(40),
+              rotation: {
+                x: spec.roof.angle - Math.PI,
+                y: -Math.PI/2,
+                z: 0
+              }
+            }
+          ]
+        )
+
+        components.push(
+          ['roof', {
+              position: [0, mm(spec.roof.apex), mm(75 + 1200 + (i * 1200) +3) ],
+              shape: [
+                [0,mm(2400 + 3)],
+                [mm(1200 -6), mm(2400 + 3)],
+                [mm(1200 -6), mm(spec.roof.length)],
+                [0, mm(spec.roof.length)]
+              ],
+              depth: mm(40),
+              rotation: {
+                x: spec.roof.angle,
+                y: -Math.PI/2,
+                z: - Math.PI
+              }
+            }
+          ],
+        )
+
+      }
+
+
+      components.push(
       ['innerRoof', {
-          position: [mm(spec.width/2-250), spec.innerPoints[2].y, mm(75)],
+          position: [mm(spec.width/2-250), spec.innerPoints[2].y, mm(75 + (i * 1200) +3)],
           shape: [
             [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.roof.innerLength - 40)],
+            [mm(1200-6), 0],
+            [mm(1200-6), mm(spec.roof.innerLength - 40)],
             [0, mm(spec.roof.innerLength - 40)]
           ],
           depth: mm(40),
@@ -495,14 +525,15 @@ class App extends Component {
             z: 0
           }
         }
-      ],
+      ])
 
+      components.push(
       ['innerRoof', {
-          position: [-mm(spec.width/2-250), spec.innerPoints[2].y, mm(75+1200)],
+          position: [-mm(spec.width/2-250), spec.innerPoints[2].y, mm(75+1200 + (i * 1200) +3)],
           shape: [
             [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.roof.innerLength)],
+            [mm(1200-6), 0],
+            [mm(1200-6), mm(spec.roof.innerLength)],
             [0, mm(spec.roof.innerLength)]
           ],
           depth: mm(40),
@@ -512,86 +543,35 @@ class App extends Component {
             z: - Math.PI
           }
         }
-      ],
+      ])
 
-      ['floor', {
-          position: [-mm(spec.width/2-250), mm(250), mm(75)],
-          shape: [
-            [0,0],
-              [mm(75),0],
-              [mm(75),-mm(250)],
-              [mm(1200-75),-mm(250)],
-              [mm(1200-75),0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.width-500)],
-            [0, mm(spec.width-500)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: -Math.PI/2,
-            y: -Math.PI/2,
-            z: 0
+
+      components.push(
+        ['innerWall', {
+            position: [-mm(spec.width/2-250), mm(250+40), mm(75+1200 + (i*1200) +3)],
+            shape: [
+              [0,0],
+              [mm(1200 - 6), 0],
+              [mm(1200 - 6), mm(spec.innerHeight - 80)],
+              [0, mm(spec.innerHeight - 80)]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: 0,
+              y: Math.PI/2,
+              z: 0
+            }
           }
-        }
-      ],
+        ],
+      )
 
-      ['outerWall', {
-          position: [mm(spec.width/2+40), 0, mm(75)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.leftWall.height)],
-            [0, mm(spec.leftWall.height)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: 0,
-            y: -Math.PI/2,
-            z: 0
-          }
-        }
-      ],
-
-      ['outerWall', {
-          position: [-mm(spec.width/2), 0, mm(75)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.leftWall.height)],
-            [0, mm(spec.leftWall.height)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: 0,
-            y: -Math.PI/2,
-            z: 0
-          }
-        }
-      ],
-
+      components.push(
       ['innerWall', {
-          position: [-mm(spec.width/2-250), mm(250+40), mm(75+1200)],
+          position: [mm(spec.width/2-250-40), mm(250+40), mm(75+1200 + (i*1200) +3)],
           shape: [
             [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.innerHeight - 80)],
-            [0, mm(spec.innerHeight - 80)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: 0,
-            y: Math.PI/2,
-            z: 0
-          }
-        }
-      ],
-
-      ['innerWall', {
-          position: [mm(spec.width/2-250-40), mm(250+40), mm(75+1200)],
-          shape: [
-            [0,0],
-            [mm(1200), 0],
-            [mm(1200), mm(spec.innerHeight - 80)],
+            [mm(1200 - 6), 0],
+            [mm(1200 - 6), mm(spec.innerHeight - 80)],
             [0, mm(spec.innerHeight - 80)]
           ],
           depth: mm(40),
@@ -602,8 +582,72 @@ class App extends Component {
           }
         }
       ]
+      )
 
-    ]
+      components.push(
+        ['outerWall', {
+            position: [-mm(spec.width/2), 0, mm(75 + (i*1200) +3)],
+            shape: [
+              [0,0],
+              [mm(1200 - 6), 0],
+              [mm(1200 - 6), mm(spec.leftWall.height)],
+              [0, mm(spec.leftWall.height)]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: 0,
+              y: -Math.PI/2,
+              z: 0
+            }
+          }
+        ]
+      )
+
+      components.push(
+        ['outerWall', {
+            position: [mm(spec.width/2+40), 0, mm(75 + (i*1200) +3)],
+            shape: [
+              [0,0],
+              [mm(1200 -6), 0],
+              [mm(1200 -6), mm(spec.leftWall.height)],
+              [0, mm(spec.leftWall.height)]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: 0,
+              y: -Math.PI/2,
+              z: 0
+            }
+          }
+        ],
+      )
+
+
+      components.push(
+        ['floor', {
+            position: [-mm(spec.width/2-250), mm(250), mm(75 + (i*1200) +3)],
+            shape: [
+              [0,0],
+                [mm(75),0],
+                [mm(75),-mm(250)],
+                [mm(1200-75),-mm(250)],
+                [mm(1200-75),0],
+              [mm(1200 - 6), 0],
+              [mm(1200 - 6), mm(Math.min(2400,spec.width-500))],
+              [0, mm(Math.min(2400,spec.width-500))]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: -Math.PI/2,
+              y: -Math.PI/2,
+              z: 0
+            }
+          }
+        ],
+      )
+    }
+
+
 
     components.forEach(component => {
       const name = component[0]
@@ -668,17 +712,16 @@ class App extends Component {
 
     setVal('internal-volume', spec.internalVolume/1000000000)
 
-    spec.plywoodSheets = 200
-    spec.plywoodCost = 22.30 * spec.plywoodSheets
-    spec.plywoodManufactureCost = 25.00 * spec.plywoodSheets
-    spec.plywoodTotal = spec.plywoodCost + spec.plywoodManufactureCost
+    // spec.plywoodSheets = 200
+    // spec.plywoodCost = 22.30 * spec.plywoodSheets
+    // spec.plywoodManufactureCost = 25.00 * spec.plywoodSheets
+    // spec.plywoodTotal = spec.plywoodCost + spec.plywoodManufactureCost
+    // setVal('plywood-sheets', spec.plywoodSheets, false)
+    // setVal('plywood-cost', spec.plywoodCost)
+    // setVal('plywood-manufacture-cost', spec.plywoodManufactureCost)
+    // setVal('plywood-total', spec.plywoodTotal)
 
-    setVal('plywood-sheets', spec.plywoodSheets, false)
-    setVal('plywood-cost', spec.plywoodCost)
-    setVal('plywood-manufacture-cost', spec.plywoodManufactureCost)
-    setVal('plywood-total', spec.plywoodTotal)
-
-    setVal('total-cost', (spec.plywoodTotal + spec.insulationCost).toFixed(2).toString().replace(/(\d)(?=(\d{3})+\.)/g, '$1,'), false)
+    setVal('total-cost', (0 + spec.insulationCost).toFixed(2).toString().replace(/(\d)(?=(\d{3})+\.)/g, '$1,'), false)
 
     return MicroHouse;
   }
