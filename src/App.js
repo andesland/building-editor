@@ -645,6 +645,32 @@ class App extends Component {
           }
         ],
       )
+
+      if (spec.width > 2400) {
+        components.push(
+          ['floor', {
+              position: [mm(spec.width/2-250), mm(250+40), mm(75 + (i*1200) +3)],
+              shape: [
+                [0,0],
+                  [mm(75),0],
+                  [mm(75),-mm(250)],
+                  [mm(1200-75),-mm(250)],
+                  [mm(1200-75),0],
+                [mm(1200 - 6), 0],
+                [mm(1200 - 6), mm(spec.width-2400-500)],
+                [0, mm(spec.width-2400-500)]
+              ],
+              depth: mm(40),
+              rotation: {
+                x: Math.PI/2,
+                y: -Math.PI/2,
+                z: 0
+              }
+            }
+          ],
+        )
+      }
+
     }
 
 
