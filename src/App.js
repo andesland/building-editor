@@ -5,6 +5,7 @@ var OrbitControls = require('three-orbit-controls')(THREE)
 import Shape from 'clipper-js'
 import {Clipper} from 'clipsy'
 import { GUI } from 'dat-gui'
+import _ from 'lodash'
 
 const rev = (mm) => (mm*25.0)
 const normalize = (mm) => (mm/25.0)
@@ -34,8 +35,11 @@ let spec = {
   beams: {
     width: 74,
     height: 200,
+  },
+  totals: {
   }
 }
+let previousSpec, newSpec;
 
 const showAxes = (object, length=30) => {
   drawArrow([1,0,0], 0XFF0000, object, length)
@@ -51,8 +55,9 @@ const drawArrow = (direction, color, parent, length) => {
   parent.add(arrowHelper)
 }
 
-const setVal = (id, val, dp=2) => {
-  document.getElementById(id).innerHTML = val.toFixed(dp)
+const setVal = (id, val, format=true) => {
+  val = (format ? val.toFixed(2) : val)
+  document.getElementById(id).innerHTML = val
 }
 
 class App extends Component {
@@ -75,6 +80,8 @@ class App extends Component {
     this.wikihouse = this.wikihouse.bind(this)
     this.animate = this.animate.bind(this)
     this.updateWikiHouse = this.updateWikiHouse.bind(this)
+    this.renderWikiHouse = _.debounce(this.renderWikiHouse.bind(this), 10)
+    // this.renderWikiHouse = this.renderWikiHouse.bind(this)
   }
 
   componentDidMount() {
@@ -155,12 +162,10 @@ class App extends Component {
 
     // SET UP DEBUG MENU
     let gui = new GUI()
-    let width = gui.add(spec, 'width', 2200, 4600).step(100).listen()
-    let height = gui.add(spec.roof, 'apex', 2000, 4600).step(100).listen()
-    let showEdges = gui.add(spec, 'showEdges')
-    height.onChange(this.updateWikiHouse)
-    width.onChange(this.updateWikiHouse)
-    showEdges.onChange(this.updateWikiHouse)
+    gui.add(spec, 'width', 2200, 4600).step(100).listen().onChange(this.updateWikiHouse)
+    gui.add(spec.roof, 'apex', 2800, 4600).step(100).listen().onChange(this.updateWikiHouse)
+    gui.add(spec, 'frames', 4, 14).step(1).listen().onChange(this.updateWikiHouse)
+    gui.add(spec, 'showEdges').onChange(this.updateWikiHouse)
 
     // ADD BALLS!
     //
@@ -189,11 +194,18 @@ class App extends Component {
 
   }
 
-  updateWikiHouse(e) {
-    if (window.microhouse) { this.scene.remove(window.microhouse) }
-    window.microhouse = this.wikihouse();
-    this.scene.add(window.microhouse);
+  renderWikiHouse() {
+    newSpec = JSON.stringify(spec)
+    if (previousSpec !== newSpec) {
+      previousSpec = newSpec
+      if (window.microhouse) { this.scene.remove(window.microhouse) }
+      window.microhouse = this.wikihouse();
+      this.scene.add(window.microhouse);
+    }
+  }
 
+  updateWikiHouse(e) {
+    this.renderWikiHouse()
     this.balls[0].position.y = mm(spec.roof.apex)
     this.balls[0].position.z = mm(600)
     this.balls[1].position.y = mm(120)
@@ -239,16 +251,14 @@ class App extends Component {
 
         if (this.raycaster.ray.intersectPlane(this.plane, this.intersection)) {
           this.selectedBall.position[this.selectedBall.name] = this.intersection[this.selectedBall.name]
-          console.log(this.selectedBall.name)
           switch(this.selectedBall.name) {
             case "x":
-              spec.width = Math.max(Math.min(-(this.selectedBall.position.x * 25.0) * 2, 4600), 2000)
+              spec.width = Math.round(Math.max(Math.min(-(this.selectedBall.position.x * 25.0) * 2, 4600), 2000) / 100) * 100
               break;
             case "y":
-              spec.roof.apex = Math.max(Math.min((this.selectedBall.position.y * 25.0), 4600), 2800)
+              spec.roof.apex = Math.round(Math.max(Math.min((this.selectedBall.position.y * 25.0), 4600), 2800) / 100) * 100
               break;
           }
-          console.log(spec)
           this.updateWikiHouse()
         }
       } else {
@@ -282,8 +292,8 @@ class App extends Component {
   wikihouse() {
     let MicroHouse = new THREE.Object3D();
 
-    spec.length = spec.frames * 1200;
-    spec.floorArea = ((spec.width/2 - 500) * 11000)/1000;
+    spec.length = (spec.frames-1) * 1200;
+    spec.floorArea = ((spec.width - 500) * spec.length);
     const opposite = spec.roof.apex-spec.leftWall.height;
     const adjacent = spec.width/2;
     spec.roof.length = Math.hypot(adjacent, opposite);
@@ -325,6 +335,21 @@ class App extends Component {
     const innerAdjacent = spec.innerPoints[2].x
     spec.roof.innerLength = rev(Math.hypot(innerAdjacent, innerOpposite))
     spec.innerHeight = rev(spec.innerPoints[2].y - spec.innerPoints[3].y)
+    spec.innerFullHeight = rev(spec.innerPoints[1].y - spec.innerPoints[3].y)
+    spec.innerWidth = rev(spec.innerPoints[4].x - spec.innerPoints[3].x)
+
+    spec.outerFrameArea = (spec.width * spec.leftWall.height) + ((spec.roof.apex - spec.leftWall.height) * spec.width)/2;
+    spec.innerFrameArea = (spec.innerWidth * spec.innerHeight) + ((spec.innerFullHeight - spec.innerHeight) * spec.innerWidth)/2;
+
+
+    spec.internalVolume = spec.innerFrameArea * spec.length
+
+    spec.frameArea = spec.outerFrameArea - spec.innerFrameArea
+    spec.frameVolume = spec.frameArea * spec.length
+
+    spec.insulationVolume = spec.frameVolume// - spec.internalVolume
+
+    spec.wallsArea = (spec.length * spec.leftWall.height) * 2
 
     var hole = new THREE.Path();
     hole.fromPoints(spec.innerPoints);
@@ -622,8 +647,38 @@ class App extends Component {
 
     var box = new THREE.Box3().setFromObject(MicroHouse)
 
-    setVal('floor-area', spec.floorArea/1000)
+    setVal('width', spec.width/1000)
+    setVal('height', spec.roof.apex/1000)
+    setVal('length', spec.length/1000)
+
+    setVal('floor-area', spec.floorArea/1000000)
     setVal('roof-area', spec.roofArea/1000000)
+    setVal('walls-area', spec.wallsArea/1000000)
+
+
+    // setVal('internal-volume', spec.innerFrameArea)
+
+    spec.footprint = (spec.width * spec.length)/1000000
+    setVal('footprint', spec.footprint)
+
+    spec.insulationVolume = spec.insulationVolume/1000000000
+    setVal('insulation-volume', spec.insulationVolume)
+    spec.insulationCost = spec.insulationVolume * 25.0
+    setVal('insulation-cost', spec.insulationCost)
+
+    setVal('internal-volume', spec.internalVolume/1000000000)
+
+    spec.plywoodSheets = 200
+    spec.plywoodCost = 22.30 * spec.plywoodSheets
+    spec.plywoodManufactureCost = 25.00 * spec.plywoodSheets
+    spec.plywoodTotal = spec.plywoodCost + spec.plywoodManufactureCost
+
+    setVal('plywood-sheets', spec.plywoodSheets, false)
+    setVal('plywood-cost', spec.plywoodCost)
+    setVal('plywood-manufacture-cost', spec.plywoodManufactureCost)
+    setVal('plywood-total', spec.plywoodTotal)
+
+    setVal('total-cost', (spec.plywoodTotal + spec.insulationCost).toFixed(2).toString().replace(/(\d)(?=(\d{3})+\.)/g, '$1,'), false)
 
     return MicroHouse;
   }
