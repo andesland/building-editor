@@ -6,11 +6,36 @@ import Shape from 'clipper-js'
 import {Clipper} from 'clipsy'
 import { GUI } from 'dat-gui'
 
-const rev = (mm) => (mm*20.0)
-const normalize = (mm) => (mm/20.0)
+const rev = (mm) => (mm*25.0)
+const normalize = (mm) => (mm/25.0)
 const mm = normalize
 
 const EDGES_COLOR = 0xbbbbbb;
+
+const ballGeometry = new THREE.SphereGeometry(mm(120), 32, 32);
+const ballMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
+
+const plywoodMaterial = new THREE.MeshPhongMaterial({color: 0xD5D3BC, shininess: 0});
+const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0});
+
+let spec = {
+  showEdges: false,
+  width: 3900,
+  frames: 10,
+  roof: {
+    apex: 3900
+  },
+  leftWall: {
+    height: 2400
+  },
+  rightWall: {
+    height: 2400
+  },
+  beams: {
+    width: 74,
+    height: 200,
+  }
+}
 
 const showAxes = (object, length=30) => {
   drawArrow([1,0,0], 0XFF0000, object, length)
@@ -30,28 +55,233 @@ const setVal = (id, val, dp=2) => {
   document.getElementById(id).innerHTML = val.toFixed(dp)
 }
 
-function wikihouse(whWidth) {
+class App extends Component {
 
-    let MicroHouse = new THREE.Object3D();
-    const plywoodMaterial = new THREE.MeshPhongMaterial({color: 0xD5D3BC, shininess: 0});
-    const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0});
-    const spec = {
-      width: whWidth,
-      frames: 10,
-      roof: {
-        apex: 3900
-      },
-      leftWall: {
-        height: 2400
-      },
-      rightWall: {
-        height: 2400
-      },
-      beams: {
-        width: 74,
-        height: 200,
+  constructor(props) {
+    super(props)
+    this.camera = undefined;
+    this.renderer = undefined;
+    this.mouse = new THREE.Vector2()
+    this.plane = new THREE.Plane()
+    this.intersection = new THREE.Vector3()
+    this.raycaster = new THREE.Raycaster()
+    this.selectedBall = null;
+    this.balls = []
+    this.mouseDown = false
+    this.onWindowResize = this.onWindowResize.bind(this)
+    this.onMouseMove = this.onMouseMove.bind(this)
+    this.onMouseDown = this.onMouseDown.bind(this)
+    this.onMouseUp = this.onMouseUp.bind(this)
+    this.wikihouse = this.wikihouse.bind(this)
+    this.animate = this.animate.bind(this)
+    this.updateWikiHouse = this.updateWikiHouse.bind(this)
+  }
+
+  componentDidMount() {
+    const VIEW_ANGLE = 75;
+    const ASPECT =  window.innerWidth / window.innerHeight;
+    const NEAR = 0.1;
+    const FAR = 10000;
+
+    // SET UP RENDERER
+    const container = document.querySelector('#container');
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    container.appendChild(this.renderer.domElement);
+    this.renderer.setPixelRatio( window.devicePixelRatio );
+    this.renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = true;
+
+    this.scene = new THREE.Scene();
+
+    // SET UP CAMERA
+    this.camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR )
+    this.camera.position.y = 220;
+    this.camera.position.x = -50;
+    this.camera.position.z = -200;
+    this.camera.lookAt(new THREE.Vector3(0,mm(1500),0))
+
+    // SET UP CAMERA CONTROLS
+    this.controls = new OrbitControls(this.camera)
+    this.controls.minPolarAngle = 0;
+    this.controls.maxPolarAngle = Math.PI / 2.1;
+    this.controls.maxDistance = mm(20000);
+    this.controls.minDistance = mm(1000);
+    this.controls.enableZoom = true;
+    this.scene.background = new THREE.Color(0xF6F6F6);
+
+    //  ADD LIGHTING
+    const ambientLight = new THREE.AmbientLight(0xF6F6F6)
+    ambientLight.intensity = 0.3;
+    this.scene.add(ambientLight);
+
+    const mainLight = new THREE.HemisphereLight(0xFFFFFF, 0xEBEBD8, 0.7);
+    this.scene.add(mainLight);
+
+    const pointLight = new THREE.PointLight(0xCFCCB4, 0.5, 0, 1);
+    pointLight.castShadow = true;
+    pointLight.shadow.mapSize.width = 2048;
+    pointLight.shadow.mapSize.height = 2048;
+    pointLight.shadow.bias = 1;
+    pointLight.position.x = 90;
+    pointLight.position.y = 500;
+    pointLight.position.z = -300;
+    this.scene.add(pointLight);
+    // const pointLightHelper = new THREE.PointLightHelper(pointLight, 50);
+    // this.scene.add(pointLightHelper);
+
+    // ADD GROUND
+    const groundMaterial = new THREE.ShadowMaterial();
+    groundMaterial.opacity = 0.2
+    const groundGeometry = new THREE.PlaneGeometry(800,800);
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.receiveShadow = true;
+    ground.position.y = -mm(200-36);
+    ground.rotation.x = -Math.PI/2;
+    this.scene.add(ground);
+    // const gridMaterial = new THREE.MeshLambertMaterial({ color: 0xEEEEEE, wireframe: true });
+    // const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
+    // let grid = new THREE.Mesh(gridGeometry, gridMaterial);
+    // grid.receiveShadow = false;
+    // grid.position.y = ground.position.y-1;
+    // grid.rotation.x = -Math.PI/2;
+    // scene.add(grid);
+
+    // SET UP EVENT LISTENERS
+    window.addEventListener( 'resize', this.onWindowResize, false )
+    this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
+    this.renderer.domElement.addEventListener('mousedown', this.onMouseDown, false )
+    this.renderer.domElement.addEventListener('mouseup', this.onMouseUp, false )
+    this.onWindowResize()
+
+    // SET UP DEBUG MENU
+    let gui = new GUI()
+    let width = gui.add(spec, 'width', 2200, 4600).step(100).listen()
+    let height = gui.add(spec.roof, 'apex', 2000, 4600).step(100).listen()
+    let showEdges = gui.add(spec, 'showEdges')
+    height.onChange(this.updateWikiHouse)
+    width.onChange(this.updateWikiHouse)
+    showEdges.onChange(this.updateWikiHouse)
+
+    // ADD BALLS!
+    //
+    const heightBall = new THREE.Mesh(ballGeometry, ballMaterial)
+    heightBall.name = 'y'
+    drawArrow([0,1,0], 0X00FF00, heightBall, 40)
+    this.scene.add(heightBall)
+    //
+    const lengthBall = new THREE.Mesh(ballGeometry, ballMaterial)
+    lengthBall.name = 'z'
+    drawArrow([0,0,-1], 0X0000FF, lengthBall, 40)
+    this.scene.add(lengthBall)
+    //
+    const widthBall = new THREE.Mesh(ballGeometry, ballMaterial)
+    widthBall.name = 'x'
+    drawArrow([-1,0,0], 0XFF0000, widthBall, 40)
+    this.scene.add(widthBall)
+    //
+    this.balls = [heightBall, lengthBall, widthBall]
+
+    // ADD WIKIHOUSE
+    this.updateWikiHouse()
+
+    // INITIALIZE SCENE
+    this.animate()
+
+  }
+
+  updateWikiHouse(e) {
+    if (window.microhouse) { this.scene.remove(window.microhouse) }
+    window.microhouse = this.wikihouse();
+    this.scene.add(window.microhouse);
+
+    this.balls[0].position.y = mm(spec.roof.apex)
+    this.balls[0].position.z = mm(600)
+    this.balls[1].position.y = mm(120)
+    this.balls[2].position.x = -mm(spec.width/2)
+    this.balls[2].position.y = mm(spec.leftWall.height/2)
+    this.balls[2].position.z = mm(600)
+  }
+
+  animate() {
+    this.renderer.render(this.scene, this.camera)
+    this.controls.update()
+    requestAnimationFrame(this.animate)
+  }
+
+  onWindowResize() {
+    this.camera.aspect = window.innerWidth/window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth,window.innerHeight);
+  }
+
+  onMouseMove(event) {
+    this.mouse.x = (event.clientX/this.renderer.domElement.width)*2 - 1
+    this.mouse.y = -(event.clientY/this.renderer.domElement.height)*2 + 1
+
+    this.raycaster.setFromCamera(this.mouse, this.camera)
+    let intersects = this.raycaster.intersectObjects(this.balls)
+
+    if (!this.mouseDown) {
+      if (intersects.length > 0) {
+        this.selectedBall = intersects[0].object
+      } else {
+        this.selectedBall = null
       }
     }
+
+    if (this.selectedBall) {
+      if (this.mouseDown) {
+        this.renderer.domElement.style.cursor = '-webkit-grabbing'
+        this.controls.enabled = false
+        this.plane.setFromNormalAndCoplanarPoint(
+          this.camera.getWorldDirection(this.plane.normal),
+          this.selectedBall.position)
+
+        if (this.raycaster.ray.intersectPlane(this.plane, this.intersection)) {
+          this.selectedBall.position[this.selectedBall.name] = this.intersection[this.selectedBall.name]
+          console.log(this.selectedBall.name)
+          switch(this.selectedBall.name) {
+            case "x":
+              spec.width = Math.max(Math.min(-(this.selectedBall.position.x * 25.0) * 2, 4600), 2000)
+              break;
+            case "y":
+              spec.roof.apex = Math.max(Math.min((this.selectedBall.position.y * 25.0), 4600), 2800)
+              break;
+          }
+          console.log(spec)
+          this.updateWikiHouse()
+        }
+      } else {
+        this.renderer.domElement.style.cursor = '-webkit-grab'
+      }
+    } else {
+      this.renderer.domElement.style.cursor = 'default'
+    }
+  }
+
+  onMouseDown(event) {
+    this.mouseDown = true
+    if (this.selectedBall) {
+      this.renderer.domElement.style.cursor = '-webkit-grabbing'
+    }
+  }
+
+  onMouseUp(event) {
+    this.mouseDown = false
+    this.selectedBall = null
+    this.controls.enabled = true
+    this.renderer.domElement.style.cursor = '-webkit-grab'
+  }
+
+  render() {
+    return (
+      <div id="container" className="App"></div>
+    )
+  }
+
+  wikihouse() {
+    let MicroHouse = new THREE.Object3D();
+
     spec.length = spec.frames * 1200;
     spec.floorArea = ((spec.width/2 - 500) * 11000)/1000;
     const opposite = spec.roof.apex-spec.leftWall.height;
@@ -95,15 +325,12 @@ function wikihouse(whWidth) {
     const innerAdjacent = spec.innerPoints[2].x
     spec.roof.innerLength = rev(Math.hypot(innerAdjacent, innerOpposite))
     spec.innerHeight = rev(spec.innerPoints[2].y - spec.innerPoints[3].y)
-    // const ip = new Clipper().OffsetPolygons(paths, -250, 0, 2, true)[0]
-    // const innerPoints = ip.map(p => new THREE.Vector2(mm(p.X), mm(p.Y)))
-    // console.log(paths[0].length, innerPoints.length)
 
     var hole = new THREE.Path();
     hole.fromPoints(spec.innerPoints);
     frameShape.holes = [hole];
 
-    var frameGeometry = new THREE.ExtrudeGeometry( frameShape, { steps: 2, amount: mm(150), bevelEnabled: false } );
+    var frameGeometry = new THREE.ExtrudeGeometry(frameShape, { steps: 2, amount: mm(150), bevelEnabled: false });
 
     var frame, distance = mm(1200);
     for (var i = 0; i < spec.frames; i++) {
@@ -114,7 +341,7 @@ function wikihouse(whWidth) {
       frame.castShadow = true;
       MicroHouse.add(frame);
 
-      if (EDGES_COLOR) {
+      if (spec.showEdges) {
         var helper = new THREE.EdgesHelper( frame, EDGES_COLOR );
         helper.position.z = frame.position.z;
         helper.matrixAutoUpdate = true;
@@ -178,7 +405,41 @@ function wikihouse(whWidth) {
       ],
 
       ['roof', {
+          position: [0, mm(spec.roof.apex), mm(75+1205)],
+          shape: [
+            [0,0],
+            [mm(1200), 0],
+            [mm(1200), mm(spec.roof.length)],
+            [0, mm(spec.roof.length)]
+          ],
+          depth: mm(40),
+          rotation: {
+            x: spec.roof.angle - Math.PI,
+            y: -Math.PI/2,
+            z: 0
+          }
+        }
+      ],
+
+      ['roof', {
           position: [0, mm(spec.roof.apex), mm(75 + 1200)],
+          shape: [
+            [0,0],
+            [mm(1200), 0],
+            [mm(1200), mm(spec.roof.length)],
+            [0, mm(spec.roof.length)]
+          ],
+          depth: mm(40),
+          rotation: {
+            x: spec.roof.angle,
+            y: -Math.PI/2,
+            z: - Math.PI
+          }
+        }
+      ],
+
+      ['roof', {
+          position: [0, mm(spec.roof.apex), mm(75 + 2405)],
           shape: [
             [0,0],
             [mm(1200), 0],
@@ -349,10 +610,10 @@ function wikihouse(whWidth) {
       mesh.receiveShadow = true;
       mesh.castShadow = true;
 
-      if (EDGES_COLOR) {
+      if (spec.showEdges) {
         var eg = new THREE.EdgesGeometry( mesh.geometry );
         var em = new THREE.LineBasicMaterial( { color: EDGES_COLOR, linewidth: 1 } );
-        var es = new THREE.Line( eg, em, THREE.LinePieces );
+        var es = new THREE.LineSegments( eg, em );
         mesh.add( es );
         MicroHouse.add(helper);
       }
@@ -363,147 +624,8 @@ function wikihouse(whWidth) {
 
     setVal('floor-area', spec.floorArea/1000)
     setVal('roof-area', spec.roofArea/1000000)
-    // MicroHouse.add(camera);
+
     return MicroHouse;
-    // scene.add(MicroHouse);
-}
-
-class App extends Component {
-
-  componentDidMount() {
-    const VIEW_ANGLE = 75;
-    const ASPECT =  window.innerWidth / window.innerHeight;
-    const NEAR = 0.1;
-    const FAR = 10000;
-
-    const container = document.querySelector('#container');
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    container.appendChild(renderer.domElement);
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
-    renderer.shadowMap.enabled = true;
-
-    const scene = new THREE.Scene();
-
-    const camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR )
-    camera.position.y = 220;
-    camera.position.x = -50;
-    camera.position.z = -200;
-    camera.lookAt(new THREE.Vector3(0,mm(1500),0))
-
-    const controls = new OrbitControls(camera)
-    controls.minPolarAngle = 0;
-    controls.maxPolarAngle = Math.PI / 2.1;
-    controls.maxDistance = mm(20000);
-    controls.minDistance = mm(1000);
-    controls.enableZoom = true;
-    scene.background = new THREE.Color(0xF6F6F6);
-
-    //  ADD Lighting
-    const ambientLight = new THREE.AmbientLight(0xF6F6F6)
-    ambientLight.intensity = 0.3;
-    scene.add(ambientLight);
-
-    const mainLight = new THREE.HemisphereLight(0xFFFFFF, 0xEBEBD8, 0.7);
-    scene.add(mainLight);
-
-    const pointLight = new THREE.PointLight(0xCFCCB4, 0.5, 0, 1);
-    pointLight.castShadow = true;
-    pointLight.shadow.mapSize.width = 2048;
-    pointLight.shadow.mapSize.height = 2048;
-    pointLight.shadow.bias = 1;
-    // pointLight.shadowCameraVisible = true;
-    pointLight.position.x = 90;
-    pointLight.position.y = 500;
-    pointLight.position.z = -300;
-    // // const pointLightHelper = new THREE.PointLightHelper(pointLight, 50);
-    // // scene.add(pointLightHelper);
-    scene.add(pointLight);
-
-    // ADD Ground
-    const groundMaterial = new THREE.ShadowMaterial();
-    groundMaterial.opacity = 0.2
-    const groundGeometry = new THREE.PlaneGeometry(800,800);
-    let ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.receiveShadow = true;
-    ground.position.y = -mm(200-36);
-    ground.rotation.x = -Math.PI/2;
-    scene.add(ground);
-
-    // const gridMaterial = new THREE.MeshLambertMaterial({ color: 0xEEEEEE, wireframe: true });
-    // const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
-    // let grid = new THREE.Mesh(gridGeometry, gridMaterial);
-    // grid.receiveShadow = false;
-    // grid.position.y = ground.position.y-1;
-    // grid.rotation.x = -Math.PI/2;
-    // scene.add(grid);
-
-    window.microhouse = wikihouse(3900);
-    scene.add(window.microhouse);
-
-    let modifier = 1;
-    function update () {
-      renderer.render(scene, camera);
-      requestAnimationFrame(update);
-      // if (key.ctrl) {
-      //   modifier = 1.0;
-      // } else {
-      //   modifier = 10.0;
-      // }
-      // if (key.isPressed("w")) { pointLight.translateZ(10/modifier); MicroHouse.translateZ(10/modifier); }
-      // else if (key.isPressed("s")) { pointLight.translateZ(-10/modifier); MicroHouse.translateZ(-10/modifier); }
-      // if (key.shift) {
-      //   if (key.isPressed("d")) { MicroHouse.rotation.y += 0.1/modifier; }
-      //   else if (key.isPressed("a")) { MicroHouse.rotation.y -= 0.1/modifier; }
-      // } else {
-      //   if (key.isPressed("d")) { pointLight.translateX(-10/modifier); MicroHouse.translateX(-10/modifier); }
-      //   else if (key.isPressed("a")) { pointLight.translateX(10/modifier); MicroHouse.translateX(10/modifier); }
-      // }
-    }
-
-    function onWindowResize(){
-      camera.aspect = window.innerWidth/window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth,window.innerHeight);
-    }
-    onWindowResize()
-    window.addEventListener( 'resize', onWindowResize, false );
-
-    controls.update()
-    update()
-
-    let gui = new GUI()
-    var guiControls = {
-      toggleRoof: function(){ window['roof'].forEach(roof => roof.visible = false) },
-      toggleFloor: function(){ window['floor'].forEach(floor => floor.visible = false) },
-    };
-    // var FizzyText = function() {
-    //   this.width = 3900;
-    // };
-    // var text = new FizzyText();
-    // gui.add(text, 'width', 2000, 5000).step(200);
-
-    this.state = {
-      width: 3900
-    }
-
-    let width = gui.add(this.state, 'width', 2000, 5000).step(100)
-    width.onChange(function(e) {
-      controls.enabled = false;
-      scene.remove(window.microhouse);
-      window.microhouse = wikihouse(e);
-      scene.add(window.microhouse);
-      controls.enabled = true;
-    })
-
-    gui.add(guiControls, 'toggleRoof');
-    gui.add(guiControls, 'toggleFloor');
-
-  }
-  render() {
-    return (
-      <div id="container" className="App"></div>
-    )
   }
 }
 
