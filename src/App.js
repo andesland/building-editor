@@ -218,11 +218,11 @@ class App extends Component {
   updateWikiHouse(e) {
     this.renderWikiHouse()
     this.balls[0].position.y = mm(spec.roof.apex)
-    this.balls[0].position.z = mm(600)
+    this.balls[0].position.z = mm(75) // 600
     this.balls[1].position.y = mm(120)
     this.balls[2].position.x = -mm(spec.width/2)
     this.balls[2].position.y = mm(spec.leftWall.height/2)
-    this.balls[2].position.z = mm(600)
+    this.balls[2].position.z = mm(75) // 600
   }
 
   animate() {
@@ -423,8 +423,6 @@ class App extends Component {
           material: barMaterial
         }
       ],
-
-
     ]
 
     for (var i = 0; i < spec.frames-1; i++) {
@@ -447,6 +445,47 @@ class App extends Component {
           }
         ]
       )
+      if (i === 0) {
+        components.push(
+          ['roof', {
+              position: [0, mm(spec.roof.apex), 0],
+              shape: [
+                [0,0],
+                [mm(75), 0],
+                [mm(75), mm(Math.min(2400,spec.roof.length))],
+                [0, mm(Math.min(2400,spec.roof.length))]
+              ],
+              depth: mm(40),
+              rotation: {
+                x: spec.roof.angle - Math.PI,
+                y: -Math.PI/2,
+                z: 0
+              }
+            }
+          ]
+        )
+      }
+
+      if (i === 0) {
+        // components.push(
+        //   ['roof', {
+        //       position: [0, mm(spec.roof.apex), mm(1200)],
+        //       shape: [
+        //         [0,0],
+        //         [mm(75), 0],
+        //         [mm(75), mm(Math.min(2400,spec.roof.length))],
+        //         [0, mm(Math.min(2400,spec.roof.length))]
+        //       ],
+        //       depth: mm(40),
+        //       rotation: {
+        //         x: spec.roof.angle,
+        //         y: -Math.PI/2,
+        //         z: - Math.PI
+        //       }
+        //     }
+        //   ]
+        // )
+      }
 
       components.push(
         ['roof', {
@@ -466,6 +505,7 @@ class App extends Component {
           }
         ],
       )
+
 
       if (spec.roof.length > 2400) {
         components.push(
@@ -510,41 +550,42 @@ class App extends Component {
 
 
       components.push(
-      ['innerRoof', {
-          position: [mm(spec.width/2-250), spec.innerPoints[2].y, mm(75 + (i * 1200) +3)],
-          shape: [
-            [0,0],
-            [mm(1200-6), 0],
-            [mm(1200-6), mm(spec.roof.innerLength - 40)],
-            [0, mm(spec.roof.innerLength - 40)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: spec.roof.angle,
-            y: -Math.PI/2,
-            z: 0
+        ['innerRoof', {
+            position: [mm(spec.width/2-250), spec.innerPoints[2].y, mm(75 + (i * 1200) +3)],
+            shape: [
+              [0,0],
+              [mm(1200-6), 0],
+              [mm(1200-6), mm(spec.roof.innerLength - 40)],
+              [0, mm(spec.roof.innerLength - 40)]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: spec.roof.angle,
+              y: -Math.PI/2,
+              z: 0
+            }
           }
-        }
-      ])
+        ]
+      )
 
       components.push(
-      ['innerRoof', {
-          position: [-mm(spec.width/2-250), spec.innerPoints[2].y, mm(75+1200 + (i * 1200) +3)],
-          shape: [
-            [0,0],
-            [mm(1200-6), 0],
-            [mm(1200-6), mm(spec.roof.innerLength)],
-            [0, mm(spec.roof.innerLength)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: spec.roof.angle - Math.PI,
-            y: -Math.PI/2,
-            z: - Math.PI
+        ['innerRoof', {
+            position: [-mm(spec.width/2-250), spec.innerPoints[2].y, mm(75+1200 + (i * 1200) +3)],
+            shape: [
+              [0,0],
+              [mm(1200-6), 0],
+              [mm(1200-6), mm(spec.roof.innerLength)],
+              [0, mm(spec.roof.innerLength)]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: spec.roof.angle - Math.PI,
+              y: -Math.PI/2,
+              z: - Math.PI
+            }
           }
-        }
-      ])
-
+        ]
+      )
 
       components.push(
         ['innerWall', {
@@ -566,22 +607,22 @@ class App extends Component {
       )
 
       components.push(
-      ['innerWall', {
-          position: [mm(spec.width/2-250-40), mm(250+40), mm(75+1200 + (i*1200) +3)],
-          shape: [
-            [0,0],
-            [mm(1200 - 6), 0],
-            [mm(1200 - 6), mm(spec.innerHeight - 80)],
-            [0, mm(spec.innerHeight - 80)]
-          ],
-          depth: mm(40),
-          rotation: {
-            x: 0,
-            y: Math.PI/2,
-            z: 0
+        ['innerWall', {
+            position: [mm(spec.width/2-250-40), mm(250+40), mm(75+1200 + (i*1200) +3)],
+            shape: [
+              [0,0],
+              [mm(1200 - 6), 0],
+              [mm(1200 - 6), mm(spec.innerHeight - 80)],
+              [0, mm(spec.innerHeight - 80)]
+            ],
+            depth: mm(40),
+            rotation: {
+              x: 0,
+              y: Math.PI/2,
+              z: 0
+            }
           }
-        }
-      ]
+        ]
       )
 
       components.push(
@@ -657,8 +698,8 @@ class App extends Component {
                   [mm(1200-75),-mm(250)],
                   [mm(1200-75),0],
                 [mm(1200 - 6), 0],
-                [mm(1200 - 6), mm(spec.width-2400-500)],
-                [0, mm(spec.width-2400-500)]
+                [mm(1200 - 6), mm(spec.width-2400-500 -3)],
+                [0, mm(spec.width-2400-500 -3)]
               ],
               depth: mm(40),
               rotation: {
