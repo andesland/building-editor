@@ -20,6 +20,8 @@ const plywoodMaterial = new THREE.MeshPhongMaterial({color: 0xD5D3BC, shininess:
 const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0});
 const insulationMaterial = new THREE.MeshPhongMaterial({color: 0xDAA39A });
 
+const coords = [[22,0],[0,47],[75,86],[111,39]]
+
 let spec = {
   showEdges: false,
   width: 3900,
@@ -27,9 +29,9 @@ let spec = {
   visible: {
     edges: false,
     topbar: true,
-    roof: false,
-    ceiling: false,
-    outerWall: false,
+    roof: true,
+    ceiling: true,
+    outerWall: true,
     innerWall: true,
     frontWall: true,
     backWall: true,
@@ -90,6 +92,7 @@ class App extends Component {
     this.raycaster = new THREE.Raycaster()
     this.selectedBall = null;
     this.balls = []
+    this.roofPanels = []
     this.mouseDown = false
     this.microhouseHolder = new THREE.Object3D()
     this.onWindowResize = this.onWindowResize.bind(this)
@@ -179,6 +182,7 @@ class App extends Component {
     this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
     this.renderer.domElement.addEventListener('mousedown', this.onMouseDown, false )
     this.renderer.domElement.addEventListener('mouseup', this.onMouseUp, false )
+
     this.onWindowResize()
 
     // SET UP DEBUG MENU
@@ -316,6 +320,18 @@ class App extends Component {
   }
 
   onMouseUp(event) {
+    if (event.which === 3) {
+      // right click
+
+      this.raycaster.setFromCamera(this.mouse, this.camera)
+      let intersects = this.raycaster.intersectObjects([...window.roof, ...window.ceiling, ...window.outerWall, ...window.innerWall])
+      if (intersects.length >= 2) {
+        intersects.sort(s => s.distance).reverse().slice(0,4).forEach(i => i.object.visible = false)
+      }
+
+
+    }
+
     this.mouseDown = false
     this.selectedBall = null
     this.controls.enabled = true
@@ -905,8 +921,7 @@ class App extends Component {
 
         let mesh = new THREE.Mesh(geoms[geom], material)
 
-        window[name] = window[name] || []
-        window[name].push(mesh)
+
 
         let parent = new THREE.Object3D();
 
@@ -918,6 +933,9 @@ class App extends Component {
         parent.rotation.x = rotation.x;
         parent.rotation.y = rotation.y;
         parent.rotation.z = rotation.z;
+
+        window[name] = window[name] || []
+        window[name].push(mesh)
 
         parent.add(mesh);
         MicroHouse.add(parent);
