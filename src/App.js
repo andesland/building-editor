@@ -324,9 +324,9 @@ class App extends Component {
       // right click
 
       this.raycaster.setFromCamera(this.mouse, this.camera)
-      let intersects = this.raycaster.intersectObjects([...window.roof, ...window.ceiling, ...window.outerWall, ...window.innerWall])
-      if (intersects.length >= 2) {
-        intersects.sort(s => s.distance).reverse().slice(0,4).forEach(i => i.object.visible = false)
+      let intersects = this.raycaster.intersectObjects([...window.components.roof, ...window.components.ceiling, ...window.components.outerWall, ...window.components.innerWall])
+      if (intersects.length >= 1) {
+        intersects.sort(s => s.distance).reverse().slice(0,2).forEach(i => i.object.visible = false)
       }
 
 
@@ -346,6 +346,8 @@ class App extends Component {
 
   wikihouse() {
     let MicroHouse = new THREE.Object3D();
+
+    window.components = {}
 
     spec.length = (spec.frames-1) * 1200;
     spec.floorArea = ((spec.width - 500) * spec.length);
@@ -934,8 +936,8 @@ class App extends Component {
         parent.rotation.y = rotation.y;
         parent.rotation.z = rotation.z;
 
-        window[name] = window[name] || []
-        window[name].push(mesh)
+        window.components[name] = window.components[name] || []
+        window.components[name].push(mesh)
 
         parent.add(mesh);
         MicroHouse.add(parent);
