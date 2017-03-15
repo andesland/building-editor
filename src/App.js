@@ -23,6 +23,7 @@ const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0})
 const insulationMaterial = new THREE.MeshPhongMaterial({color: 0xDAA39A });
 
 const projectID = parseInt(window.location.hash.replace(/\D/g,""))
+const projectLocked = !!window.location.hash.match("locked")
 let storeKey = `${projectID}-`
 
 let spec = store.get(storeKey +'spec') || {
@@ -108,7 +109,21 @@ class App extends Component {
     this.animate = this.animate.bind(this)
     this.updateWikiHouse = this.updateWikiHouse.bind(this)
     this.renderWikiHouse = _.debounce(this.renderWikiHouse.bind(this), 5)
+    this.saveCosts = _.debounce(this.saveCosts.bind(this), 1000)
     // this.renderWikiHouse = this.renderWikiHouse.bind(this)
+  }
+
+  saveCosts() {
+    const {plywoodSheets, insulationVolume} = spec
+    if (projectID) {
+      fetch(`http://localhost:3000/p/${projectID}.json`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({project: { cost_data: { plywoodSheets, insulationVolume } }})
+      })
+    }
   }
 
   componentDidMount() {
@@ -140,13 +155,14 @@ class App extends Component {
     if (store.get(storeKey +'camera')) {
       this.camera.position.copy(store.get(storeKey+'camera').position);
       this.camera.rotation.copy(store.get(storeKey+'camera').rotation);
-      this.camera.rotation.lookAt = store.get(storeKey+'camera').lookAt;
+      // this.camera.lookAt(store.get(storeKey+'camera').lookAt);
     } else {
       this.camera.position.y = 280;
       this.camera.position.x = 0;//-150;
       this.camera.position.z = -250;
-      this.camera.lookAt(new THREE.Vector3(0,mm(1500),0))
     }
+    // this.camera.lookAt(new THREE.Vector3(0,mm(1500),0));
+    this.camera.lookAt(new THREE.Vector3(this.microhouseHolder.x,mm(1500),this.microhouseHolder.z));
 
     // this.microhouseHolder.add(this.camera);
 
@@ -221,7 +237,7 @@ class App extends Component {
           const centerX = Math.max(...coords.map(c => c[0]))/2
           const centerY = Math.max(...coords.map(c => c[1]))/2
           sGeom.vertices = [...coords, coords[0]].map(p => new THREE.Vector3( p[0] - centerX, p[1] - centerY, 0))
-          var sMaterial = new THREE.LineBasicMaterial({color: 0xAAAAAA, linewidth: 1})
+          var sMaterial = new THREE.LineBasicMaterial({color: 0xCCCCCC, linewidth: 1})
           var sLine = new THREE.Line(sGeom, sMaterial)
           sLine.rotation.x = -Math.PI/2
           sLine.rotation.y = -Math.PI
@@ -234,19 +250,16 @@ class App extends Component {
 
     this.scene.add(this.microhouseHolder)
 
-    // SET UP EVENT LISTENERS
-    window.addEventListener( 'resize', this.onWindowResize, false )
-    this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
-    this.renderer.domElement.addEventListener('mousedown', this.onMouseDown, false )
-    this.renderer.domElement.addEventListener('mouseup', this.onMouseUp, false )
-
     this.onWindowResize()
 
     // SET UP DEBUG MENU
     let gui = new GUI()
-    gui.add(spec, 'width', 3100, 4900).step(100).listen().onChange(this.updateWikiHouse)
-    gui.add(spec.roof, 'apex', 2800, 4600).step(100).listen().onChange(this.updateWikiHouse)
-    gui.add(spec, 'frames', 4, 11).step(1).listen().onChange(this.updateWikiHouse)
+
+    if (!projectLocked) {
+      gui.add(spec, 'width', 3100, 4900).step(100).listen().onChange(this.updateWikiHouse)
+      gui.add(spec.roof, 'apex', 2800, 4600).step(100).listen().onChange(this.updateWikiHouse)
+      gui.add(spec, 'frames', 4, 11).step(1).listen().onChange(this.updateWikiHouse)
+    }
     gui.add(spec, 'showEdges').onChange(this.updateWikiHouse)
     gui.add(spec.visible, 'roof').listen().onChange(this.updateWikiHouse)
     gui.add(spec.visible, 'insulation').listen().onChange(this.updateWikiHouse)
@@ -257,22 +270,24 @@ class App extends Component {
     gui.add(spec.visible, 'backWall').listen().onChange(this.updateWikiHouse)
 
     // ADD BALLS!
-    //
     const heightBall = new THREE.Mesh(ballGeometry, ballMaterial)
     heightBall.name = 'y'
     drawArrow([0,1,0], 0X00FF00, heightBall, 40)
-    this.microhouseHolder.add(heightBall)
     //
     const lengthBall = new THREE.Mesh(ballGeometry, ballMaterial)
     lengthBall.name = 'z'
     drawArrow([0,0,-1], 0X0000FF, lengthBall, 40)
-    this.microhouseHolder.add(lengthBall)
     //
     const widthBall = new THREE.Mesh(ballGeometry, ballMaterial)
     widthBall.name = 'x'
     drawArrow([-1,0,0], 0XFF0000, widthBall, 40)
-    this.microhouseHolder.add(widthBall)
-    //
+
+
+    if (!projectLocked) {
+      this.microhouseHolder.add(heightBall)
+      this.microhouseHolder.add(lengthBall)
+      this.microhouseHolder.add(widthBall)
+    }
     this.balls = [heightBall, lengthBall, widthBall]
 
     // INITIALIZE SCENE
@@ -280,6 +295,14 @@ class App extends Component {
 
     // ADD WIKIHOUSE
     this.updateWikiHouse()
+
+    // SET UP EVENT LISTENERS
+    window.addEventListener( 'resize', this.onWindowResize, false )
+    this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
+    this.renderer.domElement.addEventListener('mousedown', this.onMouseDown, false )
+    this.renderer.domElement.addEventListener('mouseup', this.onMouseUp, false )
+    this.renderer.domElement.addEventListener('dblclick', this.onDoubleClick.bind(this), false )
+    document.querySelector('.ac').addEventListener('mousedown', this.controlsMouseDown.bind(this), false)
 
     // temp fix to show balls
     setTimeout(this.updateWikiHouse, 10)
@@ -290,7 +313,7 @@ class App extends Component {
     // console.log('autosave')
     store.set(storeKey +'spec', spec)
     store.set(storeKey +'mh', { position: this.microhouseHolder.position, rotation: this.microhouseHolder.rotation })
-    store.set(storeKey +'camera', { position: this.camera.position, rotation: this.camera.rotation, lookAt: this.camera.lookAt })
+    store.set(storeKey +'camera', { position: this.camera.position, rotation: this.camera.rotation, lookAt: this.controls.target })
     // console.log( store.get('microhouseHolder') )
   }
 
@@ -302,6 +325,7 @@ class App extends Component {
       window.microhouse = this.wikihouse()
       window.microhouse.position.z -= mm(spec.length/2);
       this.microhouseHolder.add(window.microhouse)
+      this.saveCosts()
       // window.microhouse.translateZ(-spec.length/2)
     }
   }
@@ -322,6 +346,7 @@ class App extends Component {
     this.renderer.render(this.scene, this.camera)
     this.controls.update()
 
+    if (!projectLocked) {
       if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
       else if (key.isPressed("s")) { this.microhouseHolder.translateZ(-mm(50)); }
       if (key.shift) {
@@ -331,6 +356,7 @@ class App extends Component {
         if (key.isPressed("d")) { this.microhouseHolder.translateX(-mm(50)); }
         else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
       }
+    }
 
     requestAnimationFrame(this.animate)
   }
@@ -342,6 +368,9 @@ class App extends Component {
   }
 
   onMouseMove(event) {
+
+    this.controls.enabled = true
+
     this.mouse.x = (event.clientX/this.renderer.domElement.width)*2 - 1
     this.mouse.y = -(event.clientY/this.renderer.domElement.height)*2 + 1
 
@@ -370,7 +399,7 @@ class App extends Component {
 
           this.offset = this.offset || new THREE.Vector3().copy(this.intersection).sub(this.selectedBall.position)
           // this.intersection[this.selectedBall.name] = Math.abs(this.intersection[this.selectedBall.name])
-          console.log(this.microhouseHolder.rotation)
+          // console.log(this.microhouseHolder.rotation)
           this.selectedBall.position[this.selectedBall.name] = this.intersection[this.selectedBall.name] - this.offset[this.selectedBall.name]//this.intersection.sub(this.offset)[this.selectedBall.name]
 
           // this.selectedBall.position[this.selectedBall.name] = this.selectedBall.originalPosition[this.selectedBall.name] + this.intersection[this.selectedBall.name]
@@ -400,6 +429,10 @@ class App extends Component {
     }
   }
 
+  controlsMouseDown(event){
+    this.controls.enabled = false
+  }
+
   onMouseDown(event) {
     this.mouseDown = true
     if (this.selectedBall) {
@@ -408,15 +441,19 @@ class App extends Component {
     }
   }
 
+  onDoubleClick(event) {
+    this.raycaster.setFromCamera(this.mouse, this.camera)
+    let intersects = this.raycaster.intersectObjects([...window.components.roof, ...window.components.ceiling, ...window.components.outerWall, ...window.components.innerWall])
+    if (intersects.length >= 1) {
+      intersects.sort(s => s.distance).reverse().slice(0,2).forEach(i => i.object.visible = false)
+    }
+  }
+
   onMouseUp(event) {
     if (event.which === 3) {
       // right click
 
-      this.raycaster.setFromCamera(this.mouse, this.camera)
-      let intersects = this.raycaster.intersectObjects([...window.components.roof, ...window.components.ceiling, ...window.components.outerWall, ...window.components.innerWall])
-      if (intersects.length >= 1) {
-        intersects.sort(s => s.distance).reverse().slice(0,2).forEach(i => i.object.visible = false)
-      }
+
     }
 
     this.offset = null
