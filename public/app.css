@@ -16,11 +16,7 @@
 
   cursor: default;
 
-  user-select: none;
-  -moz-user-select: none;
-  -khtml-user-select: none;
-  -webkit-user-select: none;
-  -o-user-select: none;
+  pointer-events: none;
 }
 
 #info ul, #info li {
@@ -35,4 +31,8 @@
 #info li.total {
   font-weight: bold;
   font-size: 2em;
+}
+
+body .dg.ac {
+  top: 70px;
 }

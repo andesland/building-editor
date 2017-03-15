@@ -6,6 +6,8 @@ import Shape from 'clipper-js'
 import {Clipper} from 'clipsy'
 import { GUI } from 'dat-gui'
 import _ from 'lodash'
+import store from 'store'
+import 'whatwg-fetch'
 
 const rev = (mm) => (mm*25.0)
 const normalize = (mm) => (mm/25.0)
@@ -20,10 +22,10 @@ const plywoodMaterial = new THREE.MeshPhongMaterial({color: 0xD5D3BC, shininess:
 const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0});
 const insulationMaterial = new THREE.MeshPhongMaterial({color: 0xDAA39A });
 
-const mpp = 0.09285155815616795
-let coords = [[200,9],[218,193],[0,211],[6,239],[435,211],[431,0]].map(c => [mm(c[0] * mpp * 1000), mm(c[1] * mpp * 1000)])
+const projectID = parseInt(window.location.hash.replace(/\D/g,""))
+let storeKey = `${projectID}-`
 
-let spec = {
+let spec = store.get(storeKey +'spec') || {
   showEdges: false,
   width: 3900,
   frames: 7,
@@ -97,6 +99,7 @@ class App extends Component {
     this.roofPanels = []
     this.mouseDown = false
     this.microhouseHolder = new THREE.Object3D()
+
     this.onWindowResize = this.onWindowResize.bind(this)
     this.onMouseMove = this.onMouseMove.bind(this)
     this.onMouseDown = this.onMouseDown.bind(this)
@@ -126,11 +129,24 @@ class App extends Component {
 
     // SET UP CAMERA
     this.camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR )
-    this.camera.position.y = 280;
-    this.camera.position.x = 0;//-150;
-    this.camera.position.z = -250;
-    this.microhouseHolder.rotation.y -= 30 * Math.PI/180;
-    this.camera.lookAt(new THREE.Vector3(0,mm(1500),0))
+
+    if (store.get(storeKey + 'mh')) {
+      this.microhouseHolder.position.copy(store.get(storeKey+'mh').position);
+      this.microhouseHolder.rotation.copy(store.get(storeKey+'mh').rotation);
+    } else {
+      this.microhouseHolder.rotation.y = -30 * Math.PI/180;
+    }
+
+    if (store.get(storeKey +'camera')) {
+      this.camera.position.copy(store.get(storeKey+'camera').position);
+      this.camera.rotation.copy(store.get(storeKey+'camera').rotation);
+      this.camera.rotation.lookAt = store.get(storeKey+'camera').lookAt;
+    } else {
+      this.camera.position.y = 280;
+      this.camera.position.x = 0;//-150;
+      this.camera.position.z = -250;
+      this.camera.lookAt(new THREE.Vector3(0,mm(1500),0))
+    }
 
     // this.microhouseHolder.add(this.camera);
 
@@ -191,18 +207,30 @@ class App extends Component {
     // // siteMesh.rotation.y = -Math.PI/2
     // this.scene.add(siteMesh)
 
-    var sGeom = new THREE.Geometry()
+    if (projectID > 0) {
+      fetch(`http://localhost:3000/p/${projectID}.json`)
+        .then((response) => (response.json()))
+        .then((json) => {
 
-    const centerX = Math.max(...coords.map(c => c[0]))
-    const centerY = Math.max(...coords.map(c => c[1]))
+          const { mpp } = json.merged_state.building
+          const coords = json.merged_state.building.site.bounds.cartesian.map(c => [mm(c[0] * mpp * 1000), mm(c[1] * mpp * 1000)])
+          // const mpp = 0.09285155815616795
+          // let coords = [[200,9],[218,193],[0,211],[6,239],[435,211],[431,0]].map(c => [mm(c[0] * mpp * 1000), mm(c[1] * mpp * 1000)])
 
-    sGeom.vertices = [...coords, coords[0]].map(p => new THREE.Vector3( p[0]-centerX/2, p[1]-centerY/2, 0))
-    var sMaterial = new THREE.LineBasicMaterial({color: 0xAAAAAA, linewidth: 1})
-    var sLine = new THREE.Line(sGeom, sMaterial)
-    sLine.rotation.x = -Math.PI/2
-    sLine.rotation.y = -Math.PI
-    this.scene.add(sLine)
+          var sGeom = new THREE.Geometry()
+          const centerX = Math.max(...coords.map(c => c[0]))/2
+          const centerY = Math.max(...coords.map(c => c[1]))/2
+          sGeom.vertices = [...coords, coords[0]].map(p => new THREE.Vector3( p[0] - centerX, p[1] - centerY, 0))
+          var sMaterial = new THREE.LineBasicMaterial({color: 0xAAAAAA, linewidth: 1})
+          var sLine = new THREE.Line(sGeom, sMaterial)
+          sLine.rotation.x = -Math.PI/2
+          sLine.rotation.y = -Math.PI
+          this.scene.add(sLine)
 
+        }).catch(function(ex) {
+          console.log('parsing failed', ex)
+        })
+    }
 
     this.scene.add(this.microhouseHolder)
 
@@ -250,13 +278,20 @@ class App extends Component {
     // INITIALIZE SCENE
     this.animate()
 
-
     // ADD WIKIHOUSE
     this.updateWikiHouse()
+
     // temp fix to show balls
     setTimeout(this.updateWikiHouse, 10)
+    setInterval(this.autosave.bind(this), 1000)
+  }
 
-
+  autosave() {
+    // console.log('autosave')
+    store.set(storeKey +'spec', spec)
+    store.set(storeKey +'mh', { position: this.microhouseHolder.position, rotation: this.microhouseHolder.rotation })
+    store.set(storeKey +'camera', { position: this.camera.position, rotation: this.camera.rotation, lookAt: this.camera.lookAt })
+    // console.log( store.get('microhouseHolder') )
   }
 
   renderWikiHouse() {
@@ -331,24 +366,27 @@ class App extends Component {
           this.selectedBall.position)
 
         if (this.raycaster.ray.intersectPlane(this.plane, this.intersection)) {
-          this.offset = this.offset || new THREE.Vector3().copy(this.intersection).sub(this.selectedBall.position)
 
-          this.selectedBall.position[this.selectedBall.name] = this.intersection.sub(this.offset)[this.selectedBall.name]
+
+          this.offset = this.offset || new THREE.Vector3().copy(this.intersection).sub(this.selectedBall.position)
+          // this.intersection[this.selectedBall.name] = Math.abs(this.intersection[this.selectedBall.name])
+          console.log(this.microhouseHolder.rotation)
+          this.selectedBall.position[this.selectedBall.name] = this.intersection[this.selectedBall.name] - this.offset[this.selectedBall.name]//this.intersection.sub(this.offset)[this.selectedBall.name]
 
           // this.selectedBall.position[this.selectedBall.name] = this.selectedBall.originalPosition[this.selectedBall.name] + this.intersection[this.selectedBall.name]
           // this.selectedBall.position[this.selectedBall.name] = this.intersection[this.selectedBall.name]
 
           switch(this.selectedBall.name) {
             case "x":
-              spec.width = Math.round(Math.max(Math.min(-(this.selectedBall.position.x * 25.0) * 2, 4900), 3100) / 100) * 100
+              spec.width = Math.abs(Math.round(Math.max(Math.min(-(this.selectedBall.position.x * 25.0) * 2, 4900), 3100) / 100) * 100)
               break;
             case "y":
-              spec.roof.apex = Math.round(Math.max(Math.min((this.selectedBall.position.y * 25.0), 4600), 2800) / 100) * 100
+              spec.roof.apex = Math.abs(Math.round(Math.max(Math.min((this.selectedBall.position.y * 25.0), 4600), 2800) / 100) * 100)
               break;
             case "z":
-              console.log()
+              // console.log()
               spec.frames = Math.max(Math.min(
-                Math.round((-rev(this.selectedBall.position.z)*2)/1200) + 1
+                Math.abs(Math.round((-rev(this.selectedBall.position.z)*2)/1200) + 1)
               , 11), 4)
               break;
           }
