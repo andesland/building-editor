@@ -27,11 +27,11 @@ const projectLocked = !!window.location.hash.match("locked")
 let storeKey = `${projectID}-`
 
 let spec = store.get(storeKey +'spec') || {
-  showEdges: false,
+  showEdges: true,
   width: 3900,
   frames: 7,
   visible: {
-    edges: false,
+    edges: true,
     topbar: true,
     roof: true,
     ceiling: true,
@@ -111,12 +111,13 @@ class App extends Component {
     this.renderWikiHouse = _.debounce(this.renderWikiHouse.bind(this), 5)
     this.saveCosts = _.debounce(this.saveCosts.bind(this), 1000)
     // this.renderWikiHouse = this.renderWikiHouse.bind(this)
+
   }
 
   saveCosts() {
     const {plywoodSheets, insulationVolume} = spec
     if (projectID) {
-      fetch(`http://localhost:3000/p/${projectID}.json`, {
+      fetch(`${process.env.REACT_APP_BUILDX_URL}/p/${projectID}.json`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -224,7 +225,7 @@ class App extends Component {
     // this.scene.add(siteMesh)
 
     if (projectID > 0) {
-      fetch(`http://localhost:3000/p/${projectID}.json`)
+      fetch(`${process.env.REACT_APP_BUILDX_URL}/p/${projectID}.json`)
         .then((response) => (response.json()))
         .then((json) => {
 
