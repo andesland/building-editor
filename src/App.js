@@ -31,6 +31,7 @@ let spec = store.get(storeKey +'spec') || {
   width: 3900,
   frames: 7,
   visible: {
+    shadows: true,
     edges: true,
     topbar: true,
     roof: true,
@@ -138,8 +139,10 @@ class App extends Component {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     container.appendChild(this.renderer.domElement);
     this.renderer.setPixelRatio( window.devicePixelRatio );
-    this.renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
-    this.renderer.shadowMap.enabled = true;
+    if (spec.visible.shadows) {
+      this.renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
+      this.renderer.shadowMap.enabled = true;
+    }
 
     this.scene = new THREE.Scene();
 
@@ -185,10 +188,13 @@ class App extends Component {
     this.scene.add(mainLight);
 
     const pointLight = new THREE.PointLight(0xCFCCB4, 0.4, 0, 1);
-    pointLight.castShadow = true;
-    pointLight.shadow.mapSize.width = 2048;
-    pointLight.shadow.mapSize.height = 2048;
-    pointLight.shadow.bias = 1;
+    if (spec.visible.shadows) {
+      pointLight.castShadow = true;
+      pointLight.shadow.mapSize.width = 2048;
+      pointLight.shadow.mapSize.height = 2048;
+      pointLight.shadow.bias = 1;
+    }
+
     pointLight.position.x = 90;
     pointLight.position.y = 500;
     pointLight.position.z = -300;
@@ -197,14 +203,17 @@ class App extends Component {
     // this.scene.add(pointLightHelper);
 
     // ADD GROUND
-    const groundMaterial = new THREE.ShadowMaterial();
-    groundMaterial.opacity = 0.2
-    const groundGeometry = new THREE.PlaneGeometry(800,800);
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.receiveShadow = true;
-    ground.position.y = -mm(200-36);
-    ground.rotation.x = -Math.PI/2;
-    this.scene.add(ground);
+    if (spec.visible.shadows) {
+      const groundMaterial = new THREE.ShadowMaterial();
+      groundMaterial.opacity = 0.2
+      const groundGeometry = new THREE.PlaneGeometry(800,800);
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+      ground.receiveShadow = true;
+      ground.position.y = -mm(200-36);
+      ground.rotation.x = -Math.PI/2;
+      this.scene.add(ground);
+    }
+
     // const gridMaterial = new THREE.MeshLambertMaterial({ color: 0xEEEEEE, wireframe: true });
     // const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
     // let grid = new THREE.Mesh(gridGeometry, gridMaterial);
@@ -262,6 +271,7 @@ class App extends Component {
       gui.add(spec, 'frames', 4, 11).step(1).listen().onChange(this.updateWikiHouse)
     }
     gui.add(spec, 'showEdges').onChange(this.updateWikiHouse)
+    gui.add(spec.visible, 'shadows').listen().onChange(this.updateWikiHouse)
     gui.add(spec.visible, 'roof').listen().onChange(this.updateWikiHouse)
     gui.add(spec.visible, 'insulation').listen().onChange(this.updateWikiHouse)
     gui.add(spec.visible, 'ceiling').listen().onChange(this.updateWikiHouse)
@@ -345,19 +355,19 @@ class App extends Component {
 
   animate() {
     this.renderer.render(this.scene, this.camera)
-    this.controls.update()
+    // this.controls.update()
 
-    if (!projectLocked) {
-      if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
-      else if (key.isPressed("s")) { this.microhouseHolder.translateZ(-mm(50)); }
-      if (key.shift) {
-        if (key.isPressed("d")) { this.microhouseHolder.rotation.y += 0.01; }
-        else if (key.isPressed("a")) { this.microhouseHolder.rotation.y -= 0.01; }
-      } else {
-        if (key.isPressed("d")) { this.microhouseHolder.translateX(-mm(50)); }
-        else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
-      }
-    }
+    // if (!projectLocked) {
+    //   if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
+    //   else if (key.isPressed("s")) { this.microhouseHolder.translateZ(-mm(50)); }
+    //   if (key.shift) {
+    //     if (key.isPressed("d")) { this.microhouseHolder.rotation.y += 0.01; }
+    //     else if (key.isPressed("a")) { this.microhouseHolder.rotation.y -= 0.01; }
+    //   } else {
+    //     if (key.isPressed("d")) { this.microhouseHolder.translateX(-mm(50)); }
+    //     else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
+    //   }
+    // }
 
     requestAnimationFrame(this.animate)
   }
@@ -369,13 +379,16 @@ class App extends Component {
   }
 
   onMouseMove(event) {
-
     this.controls.enabled = true
 
-    this.mouse.x = (event.clientX/this.renderer.domElement.width)*2 - 1
-    this.mouse.y = -(event.clientY/this.renderer.domElement.height)*2 + 1
+    this.mouse.x = (event.clientX/window.innerWidth)*2 - 1
+    this.mouse.y = -(event.clientY/window.innerHeight)*2 + 1
 
     this.raycaster.setFromCamera(this.mouse, this.camera)
+
+    // var arrowHelper = new THREE.ArrowHelper( this.raycaster.ray.direction, this.raycaster.ray.origin, 100, 0xFF0000 );
+    // this.scene.add( arrowHelper );
+
     let intersects = this.raycaster.intersectObjects(this.balls)
 
     if (!this.mouseDown) {
@@ -551,16 +564,21 @@ class App extends Component {
       frame = new THREE.Mesh(frameGeometry, plywoodMaterial);
       frame.position.z = (i * distance);// -(total/2 * distance);
       frame.position.y = 0;
-      frame.receiveShadow = true;
-      frame.castShadow = true;
+      if (spec.visible.shadows) {
+        frame.receiveShadow = true;
+        frame.castShadow = true;
+      }
+
       MicroHouse.add(frame);
 
       if (spec.visible.insulation && i+1 < spec.frames) {
         insulation = new THREE.Mesh(insulationGeometry, insulationMaterial);
         insulation.position.z = (i * distance) + mm(150 + 3);
         frame.position.y = 0;
-        frame.receiveShadow = true;
-        frame.castShadow = true;
+        if (spec.visible.shadows) {
+          frame.receiveShadow = true;
+          frame.castShadow = true;
+        }
         MicroHouse.add(insulation);
       }
 
@@ -1068,8 +1086,10 @@ class App extends Component {
         parent.add(mesh);
         MicroHouse.add(parent);
 
-        mesh.receiveShadow = true;
-        mesh.castShadow = true;
+        if (spec.visible.shadows) {
+          mesh.receiveShadow = true;
+          mesh.castShadow = true;
+        }
 
         if (spec.showEdges) {
           var eg = new THREE.EdgesGeometry( mesh.geometry );
