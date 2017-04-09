@@ -104,6 +104,7 @@ class App extends Component {
 
     this.onWindowResize = this.onWindowResize.bind(this)
     this.onMouseMove = this.onMouseMove.bind(this)
+    this.onMouseWheel = this.onMouseWheel.bind(this)
     this.onMouseDown = this.onMouseDown.bind(this)
     this.onMouseUp = this.onMouseUp.bind(this)
     this.wikihouse = this.wikihouse.bind(this)
@@ -309,6 +310,7 @@ class App extends Component {
     this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
     this.renderer.domElement.addEventListener('mousedown', this.onMouseDown, false )
     this.renderer.domElement.addEventListener('mouseup', this.onMouseUp, false )
+    this.renderer.domElement.addEventListener('mousewheel', this.onMouseWheel, false )
     this.renderer.domElement.addEventListener('dblclick', this.onDoubleClick.bind(this), false )
     document.querySelector('.ac').addEventListener('mousedown', this.controlsMouseDown.bind(this), false)
 
@@ -316,7 +318,7 @@ class App extends Component {
     setTimeout(this.updateWikiHouse, 10)
     setInterval(this.autosave.bind(this), 1000)
 
-    setTimeout(function() { this.renderer.render(this.scene, this.camera) }.bind(this), 500)
+    setTimeout(this.animate, 500)
   }
 
   autosave() {
@@ -354,7 +356,6 @@ class App extends Component {
   }
 
   animate() {
-    console.log("A")
     this.renderer.render(this.scene, this.camera)
 
     // if (this.mouseDown) {
@@ -384,6 +385,7 @@ class App extends Component {
     this.camera.aspect = window.innerWidth/window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth,window.innerHeight);
+    this.animate();
   }
 
   onMouseMove(event) {
@@ -471,6 +473,10 @@ class App extends Component {
     if (intersects.length >= 1) {
       intersects.sort(s => s.distance).reverse().slice(0,2).forEach(i => i.object.visible = false)
     }
+  }
+
+  onMouseWheel(event) {
+    this.animate()
   }
 
   onMouseUp(event) {
