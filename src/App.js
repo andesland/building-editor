@@ -360,11 +360,14 @@ class App extends Component {
 
   animate() {
 
-    if (Date.now() - updateTime < 1000) {
+    if (Date.now() - updateTime < 2000) {
       this.renderer.render(this.scene, this.camera)
     }
 
-    requestAnimationFrame(this.animate)
+    setTimeout(function() {
+      requestAnimationFrame(this.animate)
+    }.bind(this), 33) // 1000/33 = ~30.3 FPS
+
 
     // if (this.mouseDown) {
     //   // setTimeout(function() {
