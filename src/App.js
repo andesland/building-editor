@@ -301,9 +301,6 @@ class App extends Component {
     }
     this.balls = [heightBall, lengthBall, widthBall]
 
-    // INITIALIZE SCENE
-    this.animate()
-
     // ADD WIKIHOUSE
     this.updateWikiHouse()
 
@@ -318,6 +315,8 @@ class App extends Component {
     // temp fix to show balls
     setTimeout(this.updateWikiHouse, 10)
     setInterval(this.autosave.bind(this), 1000)
+
+    setTimeout(function() { this.renderer.render(this.scene, this.camera) }.bind(this), 500)
   }
 
   autosave() {
@@ -339,6 +338,7 @@ class App extends Component {
       this.saveCosts()
       // window.microhouse.translateZ(-spec.length/2)
     }
+    requestAnimationFrame(this.animate)
   }
 
   updateWikiHouse(e=null) {
@@ -354,8 +354,18 @@ class App extends Component {
   }
 
   animate() {
+    console.log("A")
     this.renderer.render(this.scene, this.camera)
-    // this.controls.update()
+
+    // if (this.mouseDown) {
+    //   // setTimeout(function() {
+    //   // this.controls.update()
+    //   // }.bind(this), 1000/30 );
+    //   this.renderer.render(this.scene, this.camera)
+    // }
+
+    // requestAnimationFrame(this.animate)
+
 
     // if (!projectLocked) {
     //   if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
@@ -368,8 +378,6 @@ class App extends Component {
     //     else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
     //   }
     // }
-
-    requestAnimationFrame(this.animate)
   }
 
   onWindowResize() {
@@ -391,7 +399,9 @@ class App extends Component {
 
     let intersects = this.raycaster.intersectObjects(this.balls)
 
-    if (!this.mouseDown) {
+    if (this.mouseDown) {
+      requestAnimationFrame(this.animate)
+    } else {
       if (intersects.length > 0) {
         this.selectedBall = intersects[0].object
       } else {
