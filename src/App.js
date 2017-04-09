@@ -366,7 +366,7 @@ class App extends Component {
 
     setTimeout(function() {
       requestAnimationFrame(this.animate)
-    }.bind(this), 33) // 1000/33 = ~30.3 FPS
+    }.bind(this), 10)
 
 
     // if (this.mouseDown) {
