@@ -26,6 +26,8 @@ const projectID = parseInt(window.location.hash.replace(/\D/g,""))
 const projectLocked = !!window.location.hash.match("locked")
 let storeKey = `${projectID}-`
 
+let updateTime = Date.now()
+
 let spec = store.get(storeKey +'spec') || {
   showEdges: true,
   width: 3900,
@@ -113,7 +115,6 @@ class App extends Component {
     this.renderWikiHouse = _.debounce(this.renderWikiHouse.bind(this), 5)
     this.saveCosts = _.debounce(this.saveCosts.bind(this), 1000)
     // this.renderWikiHouse = this.renderWikiHouse.bind(this)
-
   }
 
   saveCosts() {
@@ -318,6 +319,7 @@ class App extends Component {
     setTimeout(this.updateWikiHouse, 10)
     setInterval(this.autosave.bind(this), 1000)
 
+    updateTime = Date.now()
     setTimeout(this.animate, 500)
   }
 
@@ -340,7 +342,8 @@ class App extends Component {
       this.saveCosts()
       // window.microhouse.translateZ(-spec.length/2)
     }
-    requestAnimationFrame(this.animate)
+    // requestAnimationFrame(this.animate)
+    updateTime = Date.now()
   }
 
   updateWikiHouse(e=null) {
@@ -356,7 +359,12 @@ class App extends Component {
   }
 
   animate() {
-    this.renderer.render(this.scene, this.camera)
+
+    if (Date.now() - updateTime < 1000) {
+      this.renderer.render(this.scene, this.camera)
+    }
+
+    requestAnimationFrame(this.animate)
 
     // if (this.mouseDown) {
     //   // setTimeout(function() {
@@ -385,7 +393,8 @@ class App extends Component {
     this.camera.aspect = window.innerWidth/window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth,window.innerHeight);
-    this.animate();
+    // this.animate();
+    updateTime = Date.now()
   }
 
   onMouseMove(event) {
@@ -402,7 +411,8 @@ class App extends Component {
     let intersects = this.raycaster.intersectObjects(this.balls)
 
     if (this.mouseDown) {
-      requestAnimationFrame(this.animate)
+      // requestAnimationFrame(this.animate)
+      updateTime = Date.now()
     } else {
       if (intersects.length > 0) {
         this.selectedBall = intersects[0].object
@@ -476,7 +486,8 @@ class App extends Component {
   }
 
   onMouseWheel(event) {
-    this.animate()
+    // this.animate()
+    updateTime = Date.now()
   }
 
   onMouseUp(event) {
