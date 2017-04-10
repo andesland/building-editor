@@ -5,6 +5,10 @@
   font-family: Roboto, Helvetica, sans;
 }
 
+body {
+  overflow: hidden;
+}
+
 #info {
   width: 300px;
   padding: 10px;
