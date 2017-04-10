@@ -320,7 +320,7 @@ class App extends Component {
     setInterval(this.autosave.bind(this), 1000)
 
     updateTime = Date.now()
-    setTimeout(this.animate, 500)
+    this.animate()
   }
 
   autosave() {
@@ -364,21 +364,6 @@ class App extends Component {
       this.renderer.render(this.scene, this.camera)
     }
 
-    setTimeout(function() {
-      requestAnimationFrame(this.animate)
-    }.bind(this), 10)
-
-
-    // if (this.mouseDown) {
-    //   // setTimeout(function() {
-    //   // this.controls.update()
-    //   // }.bind(this), 1000/30 );
-    //   this.renderer.render(this.scene, this.camera)
-    // }
-
-    // requestAnimationFrame(this.animate)
-
-
     // if (!projectLocked) {
     //   if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
     //   else if (key.isPressed("s")) { this.microhouseHolder.translateZ(-mm(50)); }
@@ -389,6 +374,17 @@ class App extends Component {
     //     if (key.isPressed("d")) { this.microhouseHolder.translateX(-mm(50)); }
     //     else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
     //   }
+    // }
+
+    setTimeout(function() {
+      requestAnimationFrame(this.animate)
+    }.bind(this), 10)
+
+    // if (this.mouseDown) {
+    //   // setTimeout(function() {
+    //   // this.controls.update()
+    //   // }.bind(this), 1000/30 );
+    //   this.renderer.render(this.scene, this.camera)
     // }
   }
 
