@@ -36,3 +36,8 @@
 body .dg.ac {
   top: 70px;
 }
+
+.dg.ac {
+  left: 0 !important;
+  right: auto !important;
+}
