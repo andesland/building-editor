@@ -378,7 +378,7 @@ class App extends Component {
 
     setTimeout(function() {
       requestAnimationFrame(this.animate)
-    }.bind(this), 10)
+    }.bind(this), 5)
 
     // if (this.mouseDown) {
     //   // setTimeout(function() {
