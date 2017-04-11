@@ -290,6 +290,8 @@ class App extends Component {
     }
     this.balls = [heightBall, lengthBall, widthBall]
 
+    this.updateWikiHouse()
+
     // SET UP EVENT LISTENERS
     window.addEventListener( 'resize', this.onWindowResize, false )
     this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
@@ -300,7 +302,7 @@ class App extends Component {
     document.querySelector('.ac').addEventListener('mousedown', this.controlsMouseDown.bind(this), false)
 
     // temp fix to show balls
-    setTimeout(this.updateWikiHouse, 10)
+    setTimeout(this.updateWikiHouse, 20)
     setInterval(this.autosave.bind(this), 1000)
 
     updateTime = Date.now()
