@@ -23,7 +23,7 @@ const barMaterial = new THREE.MeshPhongMaterial({color: 0xB4B4B2, shininess: 0})
 const insulationMaterial = new THREE.MeshPhongMaterial({color: 0xDAA39A });
 
 const projectID = parseInt(window.location.hash.replace(/\D/g,""))
-const projectLocked = !!window.location.hash.match("locked")
+const projectLocked = window.location.hash.match("locked")
 let storeKey = `${projectID}-`
 
 let updateTime = Date.now()
