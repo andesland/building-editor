@@ -28,12 +28,12 @@ let storeKey = `${projectID}-`
 
 let updateTime = Date.now()
 
-let spec = store.get(storeKey +'spec') || {
+let spec = store.get(storeKey +'specs') || {
   showEdges: true,
   width: 3900,
   frames: 7,
   visible: {
-    shadows: true,
+    shadows: false,
     edges: true,
     topbar: true,
     roof: true,
@@ -141,10 +141,10 @@ class App extends Component {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     container.appendChild(this.renderer.domElement);
     this.renderer.setPixelRatio( window.devicePixelRatio );
-    if (spec.visible.shadows) {
-      this.renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
-      this.renderer.shadowMap.enabled = true;
-    }
+    // if (spec.visible.shadows) {
+    this.renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = true;
+    // }
 
     this.scene = new THREE.Scene();
 
@@ -190,12 +190,12 @@ class App extends Component {
     this.scene.add(mainLight);
 
     const pointLight = new THREE.PointLight(0xCFCCB4, 0.4, 0, 1);
-    if (spec.visible.shadows) {
+    // if (spec.visible.shadows) {
       pointLight.castShadow = true;
       pointLight.shadow.mapSize.width = 2048;
       pointLight.shadow.mapSize.height = 2048;
       pointLight.shadow.bias = 1;
-    }
+    // }
 
     pointLight.position.x = 90;
     pointLight.position.y = 500;
@@ -205,7 +205,7 @@ class App extends Component {
     // this.scene.add(pointLightHelper);
 
     // ADD GROUND
-    if (spec.visible.shadows) {
+    // if (spec.visible.shadows) {
       const groundMaterial = new THREE.ShadowMaterial();
       groundMaterial.opacity = 0.2
       const groundGeometry = new THREE.PlaneGeometry(800,800);
@@ -214,7 +214,7 @@ class App extends Component {
       ground.position.y = -mm(200-36);
       ground.rotation.x = -Math.PI/2;
       this.scene.add(ground);
-    }
+    // }
 
     // const gridMaterial = new THREE.MeshLambertMaterial({ color: 0xEEEEEE, wireframe: true });
     // const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
@@ -325,7 +325,7 @@ class App extends Component {
 
   autosave() {
     // console.log('autosave')
-    store.set(storeKey +'spec', spec)
+    store.set(storeKey +'specs', spec)
     store.set(storeKey +'mh', { position: this.microhouseHolder.position, rotation: this.microhouseHolder.rotation })
     store.set(storeKey +'camera', { position: this.camera.position, rotation: this.camera.rotation, lookAt: this.controls.target })
     // console.log( store.get('microhouseHolder') )
@@ -590,10 +590,10 @@ class App extends Component {
       frame = new THREE.Mesh(frameGeometry, plywoodMaterial);
       frame.position.z = (i * distance);// -(total/2 * distance);
       frame.position.y = 0;
-      if (spec.visible.shadows) {
-        frame.receiveShadow = true;
-        frame.castShadow = true;
-      }
+      // if (spec.visible.shadows) {
+        frame.receiveShadow = spec.visible.shadows;
+        frame.castShadow = spec.visible.shadows;
+      // }
 
       MicroHouse.add(frame);
 
@@ -601,10 +601,10 @@ class App extends Component {
         insulation = new THREE.Mesh(insulationGeometry, insulationMaterial);
         insulation.position.z = (i * distance) + mm(150 + 3);
         frame.position.y = 0;
-        if (spec.visible.shadows) {
-          frame.receiveShadow = true;
-          frame.castShadow = true;
-        }
+        // if (spec.visible.shadows) {
+          frame.receiveShadow = spec.visible.shadows;
+          frame.castShadow = spec.visible.shadows;
+        // }
         MicroHouse.add(insulation);
       }
 
@@ -1109,13 +1109,12 @@ class App extends Component {
         window.components[name] = window.components[name] || []
         window.components[name].push(mesh)
 
+        mesh.receiveShadow = true;
+        mesh.castShadow = spec.visible.shadows;
+
+
         parent.add(mesh);
         MicroHouse.add(parent);
-
-        if (spec.visible.shadows) {
-          mesh.receiveShadow = true;
-          mesh.castShadow = true;
-        }
 
         if (spec.showEdges) {
           var eg = new THREE.EdgesGeometry( mesh.geometry );
