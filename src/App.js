@@ -141,10 +141,9 @@ class App extends Component {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     container.appendChild(this.renderer.domElement);
     this.renderer.setPixelRatio( window.devicePixelRatio );
-    // if (spec.visible.shadows) {
+
     this.renderer.shadowMap.type = THREE.BasicShadowMap; // THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.enabled = true;
-    // }
 
     this.scene = new THREE.Scene();
 
@@ -192,8 +191,8 @@ class App extends Component {
     const pointLight = new THREE.PointLight(0xCFCCB4, 0.4, 0, 1);
     // if (spec.visible.shadows) {
       pointLight.castShadow = true;
-      pointLight.shadow.mapSize.width = 2048;
-      pointLight.shadow.mapSize.height = 2048;
+      pointLight.shadow.mapSize.width = 1024;
+      pointLight.shadow.mapSize.height = 1024;
       pointLight.shadow.bias = 1;
     // }
 
@@ -205,7 +204,7 @@ class App extends Component {
     // this.scene.add(pointLightHelper);
 
     // ADD GROUND
-    // if (spec.visible.shadows) {
+    if (spec.visible.shadows) {
       const groundMaterial = new THREE.ShadowMaterial();
       groundMaterial.opacity = 0.2
       const groundGeometry = new THREE.PlaneGeometry(800,800);
@@ -214,7 +213,7 @@ class App extends Component {
       ground.position.y = -mm(200-36);
       ground.rotation.x = -Math.PI/2;
       this.scene.add(ground);
-    // }
+    }
 
     // const gridMaterial = new THREE.MeshLambertMaterial({ color: 0xEEEEEE, wireframe: true });
     // const gridGeometry = new THREE.PlaneGeometry(1600,1600,30,30);
@@ -223,17 +222,6 @@ class App extends Component {
     // grid.position.y = ground.position.y-1;
     // grid.rotation.x = -Math.PI/2;
     // scene.add(grid);
-
-
-    // const sitePoints = coords.map(p => new THREE.Vector2(rev(p[0]), rev(p[1])))
-    // const siteShape = new THREE.Shape(sitePoints)
-    // var siteGeom = new THREE.ExtrudeGeometry(siteShape, { steps: 2, amount: mm(150), bevelEnabled: false })
-    // var siteMesh = new THREE.Mesh(siteGeom, insulationMaterial)
-    // // siteMesh.rotation.order = 'YZX';
-    // siteMesh.rotation.x = -Math.PI/2
-    // siteMesh.rotation.y = -Math.PI
-    // // siteMesh.rotation.y = -Math.PI/2
-    // this.scene.add(siteMesh)
 
     if (projectID > 0) {
       fetch(`${process.env.REACT_APP_BUILDX_URL}/p/${projectID}.json`)
@@ -261,7 +249,6 @@ class App extends Component {
     }
 
     this.scene.add(this.microhouseHolder)
-
     this.onWindowResize()
 
     // SET UP DEBUG MENU
@@ -303,16 +290,13 @@ class App extends Component {
     }
     this.balls = [heightBall, lengthBall, widthBall]
 
-    // ADD WIKIHOUSE
-    this.updateWikiHouse()
-
     // SET UP EVENT LISTENERS
     window.addEventListener( 'resize', this.onWindowResize, false )
     this.renderer.domElement.addEventListener('mousemove', this.onMouseMove, false )
     this.renderer.domElement.addEventListener('mousedown', this.onMouseDown, false )
     this.renderer.domElement.addEventListener('mouseup', this.onMouseUp, false )
     this.renderer.domElement.addEventListener('mousewheel', this.onMouseWheel, false )
-    this.renderer.domElement.addEventListener('dblclick', this.onDoubleClick.bind(this), false )
+    // this.renderer.domElement.addEventListener('dblclick', this.onDoubleClick.bind(this), false )
     document.querySelector('.ac').addEventListener('mousedown', this.controlsMouseDown.bind(this), false)
 
     // temp fix to show balls
@@ -364,28 +348,28 @@ class App extends Component {
       this.renderer.render(this.scene, this.camera)
     }
 
-    // if (!projectLocked) {
-    //   if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
-    //   else if (key.isPressed("s")) { this.microhouseHolder.translateZ(-mm(50)); }
-    //   if (key.shift) {
-    //     if (key.isPressed("d")) { this.microhouseHolder.rotation.y += 0.01; }
-    //     else if (key.isPressed("a")) { this.microhouseHolder.rotation.y -= 0.01; }
-    //   } else {
-    //     if (key.isPressed("d")) { this.microhouseHolder.translateX(-mm(50)); }
-    //     else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
-    //   }
-    // }
+    // // if (!projectLocked) {
+    // //   if (key.isPressed("w")) { this.microhouseHolder.translateZ(mm(50)); }
+    // //   else if (key.isPressed("s")) { this.microhouseHolder.translateZ(-mm(50)); }
+    // //   if (key.shift) {
+    // //     if (key.isPressed("d")) { this.microhouseHolder.rotation.y += 0.01; }
+    // //     else if (key.isPressed("a")) { this.microhouseHolder.rotation.y -= 0.01; }
+    // //   } else {
+    // //     if (key.isPressed("d")) { this.microhouseHolder.translateX(-mm(50)); }
+    // //     else if (key.isPressed("a")) { this.microhouseHolder.translateX(mm(50)); }
+    // //   }
+    // // }
 
     setTimeout(function() {
       requestAnimationFrame(this.animate)
     }.bind(this), 5)
 
-    // if (this.mouseDown) {
-    //   // setTimeout(function() {
-    //   // this.controls.update()
-    //   // }.bind(this), 1000/30 );
-    //   this.renderer.render(this.scene, this.camera)
-    // }
+    // // if (this.mouseDown) {
+    // //   // setTimeout(function() {
+    // //   // this.controls.update()
+    // //   // }.bind(this), 1000/30 );
+    // //   this.renderer.render(this.scene, this.camera)
+    // // }
   }
 
   onWindowResize() {
